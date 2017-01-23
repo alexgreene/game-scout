@@ -1,4 +1,4 @@
-create table Game (
+create table Games (
    G_TYPE VARCHAR(10),
    ID INTEGER PRIMARY KEY,
    LEAGUE VARCHAR(10),
@@ -19,7 +19,7 @@ create table Game (
    L_PITCHER_WINS INTEGER,
    L_PITCHER_LOSSES INTEGER,
    SV_PITCHER VARCHAR(30),
-   SV_PITCHER_SAVES INTEGER,
+   SV_PITCHER_SAVES INTEGER
 );
 
 create table Innings (
@@ -30,7 +30,7 @@ create table Innings (
    INNING INTEGER,
    HT_RUNS INTEGER,
    AT_RUNS INTEGER,
-   FOREIGN KEY (GAME_ID) REFERENCES GameStats (GAME_ID)
+   FOREIGN KEY (G_ID) REFERENCES Games (ID)
 );
 
 create table BatterStats (
@@ -73,7 +73,7 @@ create table BatterStats (
    SEA_RBI INTEGER,
    SEA_K INTEGER,
    SEA_BB INTEGER,
-   FOREIGN KEY (GAME_ID) REFERENCES GameStats (GAME_ID)
+   FOREIGN KEY (G_ID) REFERENCES Games (ID)
 );
 
 create table PitcherStats (
@@ -95,7 +95,7 @@ create table PitcherStats (
    SEA_BB INTEGER,
    SEA_L INTEGER,
    SEA_W INTEGER,
-   SEA_SV INTEGER
+   SEA_SV INTEGER,
    ER INTEGER,
    HOLD INTEGER,
    BLOWN_SV INTEGER,
@@ -111,6 +111,6 @@ create table PitcherStats (
    SEA_ER INTEGER,
    SEA_IP INTEGER,
    S INTEGER,
-   FOREIGN KEY (GAME_ID) REFERENCES GameStats (GAME_ID)
+   FOREIGN KEY (G_ID) REFERENCES Games (ID)
 );
 
