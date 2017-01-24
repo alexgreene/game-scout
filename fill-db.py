@@ -2,7 +2,6 @@ import mlbgame as mlb
 import MySQLdb
 from config import config
 import datetime
-#import time
 
 # Connect to the database and setup the db cursor.
 db = MySQLdb.connect(host = "localhost",
@@ -11,12 +10,18 @@ db = MySQLdb.connect(host = "localhost",
                      db = "mlbdata")
 cur = db.cursor()
 
+debug_flag = True
+#debug_flag = True
+
+def commit_to_db():
+   if !debug_flag:
+      db.commit()
+
 # for each game
     # add game to GAMES table, with an id as primary key
     # for each game, check if 
 
 
-#we need to have dates on most of the tables
 #how do we get the past five games of a player? make our own i_d?
 
 
@@ -77,16 +82,16 @@ def fill_db_with_past_games():
                             game.sv_pitcher,
                             game.sv_pitcher_saves
                         ])
-                    db.commit();
+                    commit_to_db()
 
                     # add the innings to Innings table
 
                     innings = mlb.box_score(game.game_id)
                     for inning in innings.innings:
                         if (inning['home'] != 'x'):
-                           ht_runs = inning['home'];
+                           ht_runs = inning['home']
                         else:
-                           ht_runs = 0;
+                           ht_runs = 0
 
                         cur.execute("""
                             INSERT into Innings(
@@ -108,29 +113,26 @@ def fill_db_with_past_games():
                             ht_runs,
                             inning['away']
                         ])
-                        db.commit();
+                        commit_to_db()
 
                     players = mlb.player_stats(game.game_id)
                     for batter in players['home_batting']:
                         if hasattr(batter, 'slg'):
-                           slg = batter.slg;
+                           slg = batter.slg
                         else:
-                           slg = None;
+                           slg = None
                         if hasattr(batter, 'ops'):
-                           ops = batter.ops;
+                           ops = batter.ops
                         else:
-                           ops = None;
+                           ops = None
                         if hasattr(batter, 'go'):
-                           go = batter.go;
+                           go = batter.go
                         else:
-                           go = None;
+                           go = None
                         if hasattr(batter, 'bo'):
-                           bo = batter.bo;
+                           bo = batter.bo
                         else:
-                           bo = None;
-                        #print game.game_id;
-                        #print batter.name_display_first_last;
-                        #print batter.bo;
+                           bo = None
                         cur.execute("""
                             INSERT into BatterStats(
                                 G_DATE,
@@ -216,25 +218,25 @@ def fill_db_with_past_games():
                                 batter.s_so,
                                 batter.s_bb
                             ])
-                        db.commit();
+                        commit_to_db()
 
                     for batter in players['away_batting']:
                         if hasattr(batter, 'slg'):
-                           slg = batter.slg;
+                           slg = batter.slg
                         else:
-                           slg = None;
+                           slg = None
                         if hasattr(batter, 'ops'):
-                           ops = batter.ops;
+                           ops = batter.ops
                         else:
-                           ops = None;
+                           ops = None
                         if hasattr(batter, 'go'):
-                           go = batter.go;
+                           go = batter.go
                         else:
-                           go = None;
+                           go = None
                         if hasattr(batter, 'bo'):
-                           bo = batter.bo;
+                           bo = batter.bo
                         else:
-                           bo = None;
+                           bo = None
                         cur.execute("""
                             INSERT into BatterStats(
                                 G_DATE,
@@ -320,25 +322,25 @@ def fill_db_with_past_games():
                                 batter.s_so,
                                 batter.s_bb
                             ])
-                        db.commit();
+                        commit_to_db()
 
                     for pitcher in players['home_pitching']:
                         if hasattr(pitcher, 'win'):
-                           win = pitcher.win;
+                           win = pitcher.win
                         else:
-                           win = None;
+                           win = None
                         if hasattr(pitcher, 'loss'):
-                           loss = pitcher.loss;
+                           loss = pitcher.loss
                         else:
-                           loss = None;
+                           loss = None
                         if hasattr(pitcher, 'save'):
-                           save = pitcher.save;
+                           save = pitcher.save
                         else:
-                           save = None;
+                           save = None
                         if hasattr(pitcher, 'note'):
-                           note = pitcher.note;
+                           note = pitcher.note
                         else:
-                           note = None;
+                           note = None
                         cur.execute("""
                             INSERT into PitcherStats(
                                 G_DATE,
@@ -414,25 +416,25 @@ def fill_db_with_past_games():
                                 pitcher.s_ip,
                                 pitcher.s
                             ])
-                    db.commit();
+                    commit_to_db()
 
                     for pitcher in players['away_pitching']:
                         if hasattr(pitcher, 'win'):
-                           win = pitcher.win;
+                           win = pitcher.win
                         else:
-                           win = None;
+                           win = None
                         if hasattr(pitcher, 'loss'):
-                           loss = pitcher.loss;
+                           loss = pitcher.loss
                         else:
-                           loss = None;
+                           loss = None
                         if hasattr(pitcher, 'save'):
-                           save = pitcher.save;
+                           save = pitcher.save
                         else:
-                           save = None;
+                           save = None
                         if hasattr(pitcher, 'note'):
-                           note = pitcher.note;
+                           note = pitcher.note
                         else:
-                           note = None;
+                           note = None
                         cur.execute("""
                             INSERT into PitcherStats(
                                 G_DATE,
@@ -508,6 +510,6 @@ def fill_db_with_past_games():
                                 pitcher.s_ip,
                                 pitcher.s
                             ])
-                        db.commit();
+                        commit_to_db()
 
 fill_db_with_past_games()
