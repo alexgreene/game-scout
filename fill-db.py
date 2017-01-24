@@ -1,13 +1,13 @@
 import mlbgame as mlb
 import MySQLdb
-import config
-
-import MySQLdb
+from config import config
+import datetime
+import time
 
 # Connect to the database and setup the db cursor.
 db = MySQLdb.connect(host = "localhost",
                      user = "root",
-                     passwd = config.db_pass,
+                     passwd = config['password'],
                      db = "mlbdata")
 cur = db.cursor()
 
@@ -15,17 +15,23 @@ cur = db.cursor()
     # add game to GAMES table, with an id as primary key
     # for each game, check if 
 
+
+we need to have dates on most of the tables
+how do we get the past five games of a player? make our own i_d?
+
+
 def fill_db_with_past_games():
     for year in range(2016, 2017):
         for month in range(4, 5):
             for day in range(1, 2):
-                game_date = '{}/{}/{}'.format(month, day, year)
+                #game_date = '{}/{}/{}'.format(month, day, year)
+                game_date = datetime.datetime(year, month, day).strftime('%Y-%m-%d')
+                print(game_date)
                 games = mlb.games(year, month, day)
                 games = mlb.combine_games(games)
                 for game in games:
-                    add game metadata to GameStats table
                     cur.execute("""
-                        INSERT into GameStats(
+                        INSERT into Games(
                             G_TYPE, 
                             ID, 
                             LEAGUE,
@@ -35,7 +41,7 @@ def fill_db_with_past_games():
                             HT_RUNS, 
                             HT_HITS, 
                             HT_ERRORS, 
-                            AT_TEAM, 
+                            AT, 
                             AT_RUNS, 
                             AT_HITS, 
                             AT_ERRORS, 
@@ -46,8 +52,9 @@ def fill_db_with_past_games():
                             L_PITCHER_WINS, 
                             L_PITCHER_LOSSES, 
                             SV_PITCHER, 
-                            SV_PITCHER_SAVES,
-                        ) values(
+                            SV_PITCHER_SAVES) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                        """, 
+                        [
                             game.game_type,
                             game.game_id,
                             game.game_league,
@@ -68,12 +75,13 @@ def fill_db_with_past_games():
                             game.l_pitcher_wins,
                             game.l_pitcher_losses,
                             game.sv_pitcher,
-                            game.sv_pitcher_saves)""")
+                            game.sv_pitcher_saves
+                        ])
 
                     # add the innings to Innings table
 
                     innings = mlb.box_score(game.game_id)
-                    for inning in innnings.innings:
+                    for inning in innings.innings:
                         cur.execute("""
                             INSERT into Innings(
                                 G_ID, 
@@ -83,14 +91,17 @@ def fill_db_with_past_games():
                                 INNING, 
                                 HT_RUNS, 
                                 AT_RUNS, 
-                            ) values(
-                                game.game_id,
-                                game_date,
-                                game.home_team,
-                                game.away_team,
-                                inning.inning,
-                                inning.home,
-                                inning.away)""")
+                            ) values(%s,'%s',%s,%s,%s,%s,%s)
+                        """,
+                        [
+                            game.game_id,
+                            game_date,
+                            game.home_team,
+                            game.away_team,
+                            inning['inning'],
+                            inning['home'],
+                            inning['away']
+                        ])
 
                     players = mlbgame.player_stats(game.game_id)
                     for batter in players['home_batting']:
@@ -134,8 +145,9 @@ def fill_db_with_past_games():
                                 SEA_HR,
                                 SEA_RBI,
                                 SEA_K,
-                                SEA_BB,
-                            ) values(
+                                SEA_BB) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                            """,
+                            [
                                 batter.name_display_first_last,
                                 batter.name,
                                 game.home_team,
@@ -174,7 +186,8 @@ def fill_db_with_past_games():
                                 batter.s_hr,
                                 batter.s_rbi,
                                 batter.s_so,
-                                batter.s_bb)""")
+                                batter.s_bb
+                            ])
 
                     for batter in players['away_batting']:
                         cur.execute("""
@@ -217,8 +230,9 @@ def fill_db_with_past_games():
                                 SEA_HR,
                                 SEA_RBI,
                                 SEA_K,
-                                SEA_BB,
-                            ) values(
+                                SEA_BB) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                            """,
+                            [
                                 batter.name_display_first_last,
                                 batter.name,
                                 game.away_team,
@@ -257,7 +271,8 @@ def fill_db_with_past_games():
                                 batter.s_hr,
                                 batter.s_rbi,
                                 batter.s_so,
-                                batter.s_bb)""")
+                                batter.s_bb
+                            ])
 
                     for pitcher in players['home_pitching']:
                         cur.execute("""
@@ -295,14 +310,15 @@ def fill_db_with_past_games():
                                 NOTES,
                                 SEA_ER,
                                 SEA_IP,
-                                S
-                            ) values(
+                                S) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                            """,
+                            [
                                 pitcher.name_display_first_last,
                                 pitcher.name,
                                 game.home_team,
                                 True,
                                 pitcher.pos,
-                                game.id
+                                game.id,
                                 pitcher.id,
                                 pitcher.h,
                                 pitcher.r,
@@ -330,7 +346,8 @@ def fill_db_with_past_games():
                                 pitcher.note,
                                 pitcher.s_er,
                                 pitcher.s_ip,
-                                pitcher.s)""")
+                                pitcher.s
+                            ])
 
                     for pitcher in players['away_pitching']:
                         cur.execute("""
@@ -368,14 +385,15 @@ def fill_db_with_past_games():
                                 NOTES,
                                 SEA_ER,
                                 SEA_IP,
-                                S
-                            ) values(
+                                S) values()
+                            """,
+                            [
                                 pitcher.name_display_first_last,
                                 pitcher.name,
                                 game.away_team,
                                 False,
                                 pitcher.pos,
-                                game.id
+                                game.id,
                                 pitcher.id,
                                 pitcher.h,
                                 pitcher.r,
@@ -403,7 +421,8 @@ def fill_db_with_past_games():
                                 pitcher.note,
                                 pitcher.s_er,
                                 pitcher.s_ip,
-                                pitcher.s)""")
+                                pitcher.s
+                            ])
 
 fill_db_with_past_games()
 
