@@ -2,7 +2,7 @@ import mlbgame as mlb
 import MySQLdb
 from config import config
 import datetime
-import time
+#import time
 
 # Connect to the database and setup the db cursor.
 db = MySQLdb.connect(host = "localhost",
@@ -16,17 +16,15 @@ cur = db.cursor()
     # for each game, check if 
 
 
-we need to have dates on most of the tables
-how do we get the past five games of a player? make our own i_d?
+#we need to have dates on most of the tables
+#how do we get the past five games of a player? make our own i_d?
 
 
 def fill_db_with_past_games():
     for year in range(2016, 2017):
         for month in range(4, 5):
             for day in range(1, 2):
-                #game_date = '{}/{}/{}'.format(month, day, year)
-                game_date = datetime.datetime(year, month, day).strftime('%Y-%m-%d')
-                print(game_date)
+                game_date = datetime.date(year, month, day).isoformat();
                 games = mlb.games(year, month, day)
                 games = mlb.combine_games(games)
                 for game in games:
@@ -77,11 +75,17 @@ def fill_db_with_past_games():
                             game.sv_pitcher,
                             game.sv_pitcher_saves
                         ])
+                    db.commit();
 
                     # add the innings to Innings table
 
                     innings = mlb.box_score(game.game_id)
                     for inning in innings.innings:
+                        if (inning['home'] != 'x'):
+                           ht_runs = inning['home'];
+                        else:
+                           ht_runs = -1;
+
                         cur.execute("""
                             INSERT into Innings(
                                 G_ID, 
@@ -90,8 +94,8 @@ def fill_db_with_past_games():
                                 AT, 
                                 INNING, 
                                 HT_RUNS, 
-                                AT_RUNS, 
-                            ) values(%s,'%s',%s,%s,%s,%s,%s)
+                                AT_RUNS 
+                            ) values(%s,%s,%s,%s,%s,%s,%s)
                         """,
                         [
                             game.game_id,
@@ -99,12 +103,32 @@ def fill_db_with_past_games():
                             game.home_team,
                             game.away_team,
                             inning['inning'],
-                            inning['home'],
+                            ht_runs,
                             inning['away']
                         ])
+                        db.commit();
 
-                    players = mlbgame.player_stats(game.game_id)
+                    players = mlb.player_stats(game.game_id)
                     for batter in players['home_batting']:
+                        if hasattr(batter, 'slg'):
+                           slg = batter.slg;
+                        else:
+                           slg = None;
+                        if hasattr(batter, 'ops'):
+                           ops = batter.ops;
+                        else:
+                           ops = None;
+                        if hasattr(batter, 'go'):
+                           go = batter.go;
+                        else:
+                           go = None;
+                        if hasattr(batter, 'bo'):
+                           bo = batter.bo;
+                        else:
+                           bo = None;
+                        #print game.game_id;
+                        #print batter.name_display_first_last;
+                        #print batter.bo;
                         cur.execute("""
                             INSERT into BatterStats(
                                 NAME, 
@@ -153,7 +177,7 @@ def fill_db_with_past_games():
                                 game.home_team,
                                 True,
                                 batter.pos,
-                                game.id,
+                                game.game_id,
                                 batter.id,
                                 batter.ab,
                                 batter.avg,
@@ -163,16 +187,16 @@ def fill_db_with_past_games():
                                 batter.r,
                                 batter.rbi,
                                 batter.hr,
-                                batter.slg,
+                                slg,
                                 batter.obp,
-                                batter.ops,
+                                ops,
                                 batter.fldg,
-                                batter.bo,
+                                bo,
                                 batter.bb,
                                 batter.sb,
                                 batter.cs,
                                 batter.e,
-                                batter.hpb,
+                                batter.hbp,
                                 batter.so,
                                 batter.sac,
                                 batter.sf,
@@ -180,7 +204,7 @@ def fill_db_with_past_games():
                                 batter.ao,
                                 batter.po,
                                 batter.a,
-                                batter.go,
+                                go,
                                 batter.s_h,
                                 batter.s_r,
                                 batter.s_hr,
@@ -188,8 +212,25 @@ def fill_db_with_past_games():
                                 batter.s_so,
                                 batter.s_bb
                             ])
+                        db.commit();
 
                     for batter in players['away_batting']:
+                        if hasattr(batter, 'slg'):
+                           slg = batter.slg;
+                        else:
+                           slg = None;
+                        if hasattr(batter, 'ops'):
+                           ops = batter.ops;
+                        else:
+                           ops = None;
+                        if hasattr(batter, 'go'):
+                           go = batter.go;
+                        else:
+                           go = None;
+                        if hasattr(batter, 'bo'):
+                           bo = batter.bo;
+                        else:
+                           bo = None;
                         cur.execute("""
                             INSERT into BatterStats(
                                 NAME, 
@@ -238,7 +279,7 @@ def fill_db_with_past_games():
                                 game.away_team,
                                 False,
                                 batter.pos,
-                                game.id,
+                                game.game_id,
                                 batter.id,
                                 batter.ab,
                                 batter.avg,
@@ -248,16 +289,16 @@ def fill_db_with_past_games():
                                 batter.r,
                                 batter.rbi,
                                 batter.hr,
-                                batter.slg,
+                                slg,
                                 batter.obp,
-                                batter.ops,
+                                ops,
                                 batter.fldg,
-                                batter.bo,
+                                bo,
                                 batter.bb,
                                 batter.sb,
                                 batter.cs,
                                 batter.e,
-                                batter.hpb,
+                                batter.hbp,
                                 batter.so,
                                 batter.sac,
                                 batter.sf,
@@ -265,7 +306,7 @@ def fill_db_with_past_games():
                                 batter.ao,
                                 batter.po,
                                 batter.a,
-                                batter.go,
+                                go,
                                 batter.s_h,
                                 batter.s_r,
                                 batter.s_hr,
@@ -273,8 +314,25 @@ def fill_db_with_past_games():
                                 batter.s_so,
                                 batter.s_bb
                             ])
+                        db.commit();
 
                     for pitcher in players['home_pitching']:
+                        if hasattr(pitcher, 'win'):
+                           win = pitcher.win;
+                        else:
+                           win = None;
+                        if hasattr(pitcher, 'loss'):
+                           loss = pitcher.loss;
+                        else:
+                           loss = None;
+                        if hasattr(pitcher, 'save'):
+                           save = pitcher.save;
+                        else:
+                           save = None;
+                        if hasattr(pitcher, 'note'):
+                           note = pitcher.note;
+                        else:
+                           note = None;
                         cur.execute("""
                             INSERT into PitcherStats(
                                 NAME, 
@@ -304,10 +362,10 @@ def fill_db_with_past_games():
                                 GAME_SCORE,
                                 ERA,
                                 PITCHES,
-                                W,
-                                L,
-                                SV,
-                                NOTES,
+                                WIN,
+                                LOSS,
+                                SAVE,
+                                NOTE,
                                 SEA_ER,
                                 SEA_IP,
                                 S) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
@@ -318,7 +376,7 @@ def fill_db_with_past_games():
                                 game.home_team,
                                 True,
                                 pitcher.pos,
-                                game.id,
+                                game.game_id,
                                 pitcher.id,
                                 pitcher.h,
                                 pitcher.r,
@@ -340,16 +398,33 @@ def fill_db_with_past_games():
                                 pitcher.game_score,
                                 pitcher.era,
                                 pitcher.np,
-                                pitcher.win,
-                                pitcher.loss,
-                                pitcher.save,
-                                pitcher.note,
+                                win,
+                                loss,
+                                save,
+                                note,
                                 pitcher.s_er,
                                 pitcher.s_ip,
                                 pitcher.s
                             ])
+                    db.commit();
 
                     for pitcher in players['away_pitching']:
+                        if hasattr(pitcher, 'win'):
+                           win = pitcher.win;
+                        else:
+                           win = None;
+                        if hasattr(pitcher, 'loss'):
+                           loss = pitcher.loss;
+                        else:
+                           loss = None;
+                        if hasattr(pitcher, 'save'):
+                           save = pitcher.save;
+                        else:
+                           save = None;
+                        if hasattr(pitcher, 'note'):
+                           note = pitcher.note;
+                        else:
+                           note = None;
                         cur.execute("""
                             INSERT into PitcherStats(
                                 NAME, 
@@ -379,13 +454,13 @@ def fill_db_with_past_games():
                                 GAME_SCORE,
                                 ERA,
                                 PITCHES,
-                                W,
-                                L,
-                                SV,
-                                NOTES,
+                                WIN,
+                                LOSS,
+                                SAVE,
+                                NOTE,
                                 SEA_ER,
                                 SEA_IP,
-                                S) values()
+                                S) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                             """,
                             [
                                 pitcher.name_display_first_last,
@@ -393,7 +468,7 @@ def fill_db_with_past_games():
                                 game.away_team,
                                 False,
                                 pitcher.pos,
-                                game.id,
+                                game.game_id,
                                 pitcher.id,
                                 pitcher.h,
                                 pitcher.r,
@@ -415,14 +490,14 @@ def fill_db_with_past_games():
                                 pitcher.game_score,
                                 pitcher.era,
                                 pitcher.np,
-                                pitcher.win,
-                                pitcher.loss,
-                                pitcher.save,
-                                pitcher.note,
+                                win,
+                                loss,
+                                save,
+                                note,
                                 pitcher.s_er,
                                 pitcher.s_ip,
                                 pitcher.s
                             ])
+                        db.commit();
 
 fill_db_with_past_games()
-
