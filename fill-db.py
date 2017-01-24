@@ -84,7 +84,7 @@ def fill_db_with_past_games():
                         if (inning['home'] != 'x'):
                            ht_runs = inning['home'];
                         else:
-                           ht_runs = -1;
+                           ht_runs = 0;
 
                         cur.execute("""
                             INSERT into Innings(
