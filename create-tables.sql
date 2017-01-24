@@ -1,4 +1,5 @@
 create table Games (
+   G_DATE DATE,
    G_TYPE VARCHAR(10),
    ID VARCHAR(50) PRIMARY KEY,
    LEAGUE VARCHAR(10),
@@ -35,6 +36,7 @@ create table Innings (
 );
 
 create table BatterStats (
+   G_DATE DATE,
    NAME VARCHAR(30),
    NAME_ABBR VARCHAR(20),
    TEAM VARCHAR(30),
@@ -78,6 +80,7 @@ create table BatterStats (
 );
 
 create table PitcherStats (
+   G_DATE DATE,
    NAME VARCHAR(30),
    NAME_ABBR VARCHAR(20),
    TEAM VARCHAR(30),

@@ -30,6 +30,7 @@ def fill_db_with_past_games():
                 for game in games:
                     cur.execute("""
                         INSERT into Games(
+                            G_DATE,
                             G_TYPE, 
                             ID, 
                             LEAGUE,
@@ -50,9 +51,10 @@ def fill_db_with_past_games():
                             L_PITCHER_WINS, 
                             L_PITCHER_LOSSES, 
                             SV_PITCHER, 
-                            SV_PITCHER_SAVES) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                            SV_PITCHER_SAVES) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                         """, 
                         [
+                            game_date,
                             game.game_type,
                             game.game_id,
                             game.game_league,
@@ -131,6 +133,7 @@ def fill_db_with_past_games():
                         #print batter.bo;
                         cur.execute("""
                             INSERT into BatterStats(
+                                G_DATE,
                                 NAME, 
                                 NAME_ABBR, 
                                 TEAM,
@@ -169,9 +172,10 @@ def fill_db_with_past_games():
                                 SEA_HR,
                                 SEA_RBI,
                                 SEA_K,
-                                SEA_BB) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                SEA_BB) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                             """,
                             [
+                                game_date,
                                 batter.name_display_first_last,
                                 batter.name,
                                 game.home_team,
@@ -233,6 +237,7 @@ def fill_db_with_past_games():
                            bo = None;
                         cur.execute("""
                             INSERT into BatterStats(
+                                G_DATE,
                                 NAME, 
                                 NAME_ABBR, 
                                 TEAM,
@@ -271,9 +276,10 @@ def fill_db_with_past_games():
                                 SEA_HR,
                                 SEA_RBI,
                                 SEA_K,
-                                SEA_BB) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                SEA_BB) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                             """,
                             [
+                                game_date,
                                 batter.name_display_first_last,
                                 batter.name,
                                 game.away_team,
@@ -335,6 +341,7 @@ def fill_db_with_past_games():
                            note = None;
                         cur.execute("""
                             INSERT into PitcherStats(
+                                G_DATE,
                                 NAME, 
                                 NAME_ABBR, 
                                 TEAM,
@@ -368,9 +375,10 @@ def fill_db_with_past_games():
                                 NOTE,
                                 SEA_ER,
                                 SEA_IP,
-                                S) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                S) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                             """,
                             [
+                                game_date,
                                 pitcher.name_display_first_last,
                                 pitcher.name,
                                 game.home_team,
@@ -427,6 +435,7 @@ def fill_db_with_past_games():
                            note = None;
                         cur.execute("""
                             INSERT into PitcherStats(
+                                G_DATE,
                                 NAME, 
                                 NAME_ABBR, 
                                 TEAM,
@@ -460,9 +469,10 @@ def fill_db_with_past_games():
                                 NOTE,
                                 SEA_ER,
                                 SEA_IP,
-                                S) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                S) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                             """,
                             [
+                                game_date,
                                 pitcher.name_display_first_last,
                                 pitcher.name,
                                 game.away_team,
