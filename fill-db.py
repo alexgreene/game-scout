@@ -11,19 +11,10 @@ db = MySQLdb.connect(host = "localhost",
 cur = db.cursor()
 
 debug_flag = True
-#debug_flag = True
 
 def commit_to_db():
    if !debug_flag:
       db.commit()
-
-# for each game
-    # add game to GAMES table, with an id as primary key
-    # for each game, check if 
-
-
-#how do we get the past five games of a player? make our own i_d?
-
 
 def fill_db_with_past_games():
     for year in range(2016, 2017):
