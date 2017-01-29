@@ -10,6 +10,9 @@ db = MySQLdb.connect(host = "localhost",
                      db = "mlbdata")
 cur = db.cursor()
 
+###### INSTRUCTIONS #######
+# False: SQL commands will be committed to your db
+# True: SQL commands will not commit, no data enters db.
 debug_flag = False
 
 def commit_to_db():
@@ -104,7 +107,7 @@ season = {
 }
 
 def fill_db_with_past_games():
-    for year in range(2016, 2017):
+    for year in range(2012, 2017):
         for month in range(season[year]['sm'], season[year]['em']):
             if month == season[year]['em']:
                 sd = 1
