@@ -10,20 +10,118 @@ db = MySQLdb.connect(host = "localhost",
                      db = "mlbdata")
 cur = db.cursor()
 
-debug_flag = True
+debug_flag = False
 
 def commit_to_db():
-   if !debug_flag:
+   if debug_flag == False:
       db.commit()
+
+def array_to_dict(arr):
+    arr_dict = {}
+    for el in arr:
+        arr_dict[el] = 0
+
+    return arr_dict
+
+def guarant_type(val, attr):
+    num_reqs = array_to_dict(
+        ['id', 'ab', 'avg', 'h', 'd', 't', 'r', 'rbi', 
+        'hr', 'slg', 'obp', 'ops', 'fldg', 'bo', 'bb', 
+        'sb', 'cs', 'e', 'hbp', 'so', 'sac', 'sf', 
+        'lob', 'ao', 'po', 'a', 'go', 's_h', 's_r',
+        's_hr', 's_rbi', 's_so', 's_bb', 'era', 'l', 'w', 'sv', 'er', 'hld',
+        'bs', 'out', 'bf', 'game_score', 'np', 's_er', 's_ip', 's', 
+        'home_team_hits', 'home_team_runs', 'home_team_errors', 'away_team_hits',
+        'away_team_runs', 'away_team_errors','w_pitcher_wins', 'w_pitcher_losses',
+        'l_pitcher_wins','l_pitcher_losses', 'sv_pitcher_saves'])
+    
+    if attr not in num_reqs:
+        return val
+    try:
+        float(val)
+        return val
+    except:
+        return 0
+
+def ensure_attr_batter(batter):
+    new_batter = {}
+    for attr in ['name_display_first_last', 'name', 'pos', 'id', 'ab', 'avg',
+    'h', 'd', 't', 'r', 'rbi', 'hr', 'slg', 'obp', 'ops', 'fldg', 'bo', 'bb',
+    'sb', 'cs', 'e', 'hbp', 'so', 'sac', 'sf', 'lob', 'ao', 'po', 'a', 'go',
+    's_h', 's_r', 's_hr', 's_rbi', 's_so', 's_bb']:
+
+        if hasattr(batter, attr):
+            new_batter[attr] = getattr(batter, attr)
+        else:
+            new_batter[attr] = None
+
+        new_batter[attr] = guarant_type(new_batter[attr], attr)
+
+    return new_batter
+
+
+def ensure_attr_pitcher(pitcher):
+    new_pitcher = {}
+    for attr in ['name_display_first_last', 'name', 'pos', 'id', 'h', 'r', 'hr', 
+    'bb', 'so', 's_h', 's_r', 's_so', 's_bb', 'l', 'w', 'sv', 'er', 'hld', 'bs', 
+    'out', 'bf', 'game_score', 'era', 'np', 'win', 'loss', 'save', 'note', 's_er', 
+    's_ip', 's']:
+
+        if hasattr(pitcher, attr):
+            new_pitcher[attr] = getattr(pitcher, attr)
+        else:
+            new_pitcher[attr] = None
+
+        new_pitcher[attr] = guarant_type(new_pitcher[attr], attr)
+
+    return new_pitcher
+
+def ensure_attr_game(game):                            
+    new_game = {}
+    for attr in ['game_type', 'game_id', 'game_league', 'game_status', 'game_start_time', 'home_team', 'home_team_runs',
+    'home_team_hits', 'home_team_errors', 'away_team', 'away_team_runs', 'away_team_hits', 'away_team_errors',
+    'w_pitcher', 'w_pitcher_wins', 'w_pitcher_losses', 'l_pitcher', 'l_pitcher_wins', 'l_pitcher_losses',
+    'sv_pitcher', 'sv_pitcher_saves']:
+
+        if hasattr(game, attr):
+            new_game[attr] = getattr(game, attr)
+        else:
+            if attr == 'game_id':
+                new_game[attr] = '_'
+            else:
+                new_game[attr] = None
+
+        new_game[attr] = guarant_type(new_game[attr], attr)
+
+    return new_game
+
+season = {
+    2012 : {'sm': 3, 'sd': 28, 'em': 10, 'ed': 28},
+    2013 : {'sm': 3, 'sd': 31, 'em': 10, 'ed': 30},
+    2014 : {'sm': 3, 'sd': 22, 'em': 10, 'ed': 29},
+    2015 : {'sm': 4, 'sd': 5, 'em': 11, 'ed': 1},
+    2016 : {'sm': 4, 'sd': 3, 'em': 11, 'ed': 2},
+}
 
 def fill_db_with_past_games():
     for year in range(2016, 2017):
-        for month in range(4, 5):
-            for day in range(1, 2):
+        for month in range(season[year]['sm'], season[year]['em']):
+            if month == season[year]['em']:
+                sd = 1
+                ed = season[year]['ed']
+            elif month == season[year]['sm']:
+                sd = season[year]['sd']
+                ed = 31
+            else:
+                sd = 1
+                ed = 31
+            for day in range(sd, ed):
                 game_date = datetime.date(year, month, day).isoformat();
                 games = mlb.games(year, month, day)
                 games = mlb.combine_games(games)
                 for game in games:
+                    print(game.game_id)
+                    new_game = ensure_attr_game(game)
                     cur.execute("""
                         INSERT into Games(
                             G_DATE,
@@ -47,83 +145,79 @@ def fill_db_with_past_games():
                             L_PITCHER_WINS, 
                             L_PITCHER_LOSSES, 
                             SV_PITCHER, 
-                            SV_PITCHER_SAVES) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                            SV_PITCHER_SAVES) values(%s,%s,%s,%s,%s,%s,%s,
+                            %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                            ON DUPLICATE KEY UPDATE ID=ID
                         """, 
                         [
                             game_date,
-                            game.game_type,
-                            game.game_id,
-                            game.game_league,
-                            game.game_status,
-                            game.game_start_time,
-                            game.home_team,
-                            game.home_team_runs,
-                            game.home_team_hits,
-                            game.home_team_errors,
-                            game.away_team,
-                            game.away_team_runs,
-                            game.away_team_hits,
-                            game.away_team_errors,
-                            game.w_pitcher,
-                            game.w_pitcher_wins,
-                            game.w_pitcher_losses,
-                            game.l_pitcher,
-                            game.l_pitcher_wins,
-                            game.l_pitcher_losses,
-                            game.sv_pitcher,
-                            game.sv_pitcher_saves
+                            new_game['game_type'],
+                            new_game['game_id'],
+                            new_game['game_league'],
+                            new_game['game_status'],
+                            new_game['game_start_time'],
+                            new_game['home_team'],
+                            new_game['home_team_runs'],
+                            new_game['home_team_hits'],
+                            new_game['home_team_errors'],
+                            new_game['away_team'],
+                            new_game['away_team_runs'],
+                            new_game['away_team_hits'],
+                            new_game['away_team_errors'],
+                            new_game['w_pitcher'],
+                            new_game['w_pitcher_wins'],
+                            new_game['w_pitcher_losses'],
+                            new_game['l_pitcher'],
+                            new_game['l_pitcher_wins'],
+                            new_game['l_pitcher_losses'],
+                            new_game['sv_pitcher'],
+                            new_game['sv_pitcher_saves']
                         ])
                     commit_to_db()
 
                     # add the innings to Innings table
+                    try:
+                        innings = mlb.box_score(game.game_id)
 
-                    innings = mlb.box_score(game.game_id)
-                    for inning in innings.innings:
-                        if (inning['home'] != 'x'):
-                           ht_runs = inning['home']
-                        else:
-                           ht_runs = 0
+                        if hasattr(innings, 'innings'):
+                            for inning in innings.innings:
+                                if (inning['home'] != 'x'):
+                                   ht_runs = inning['home']
+                                else:
+                                   ht_runs = 0
 
-                        cur.execute("""
-                            INSERT into Innings(
-                                G_ID, 
-                                G_DATE, 
-                                HT,
-                                AT, 
-                                INNING, 
-                                HT_RUNS, 
-                                AT_RUNS 
-                            ) values(%s,%s,%s,%s,%s,%s,%s)
-                        """,
-                        [
-                            game.game_id,
-                            game_date,
-                            game.home_team,
-                            game.away_team,
-                            inning['inning'],
-                            ht_runs,
-                            inning['away']
-                        ])
-                        commit_to_db()
+                                cur.execute("""
+                                    INSERT into Innings(
+                                        G_ID, 
+                                        G_DATE, 
+                                        HT,
+                                        AT, 
+                                        INNING, 
+                                        HT_RUNS, 
+                                        AT_RUNS 
+                                    ) values(%s,%s,%s,%s,%s,%s,%s)
+                                """,
+                                [
+                                    new_game['game_id'],
+                                    game_date,
+                                    new_game['home_team'],
+                                    new_game['away_team'],
+                                    inning['inning'],
+                                    ht_runs,
+                                    inning['away']
+                                ])
+                                commit_to_db()
+                    except:
+                        print("> box score not found")
 
-                    players = mlb.player_stats(game.game_id)
+                    try:
+                        players = mlb.player_stats(new_game['game_id'])
+                    except:
+                        print("> player stats not found")
+                        continue
                     for batter in players['home_batting']:
-                        if hasattr(batter, 'slg'):
-                           slg = batter.slg
-                        else:
-                           slg = None
-                        if hasattr(batter, 'ops'):
-                           ops = batter.ops
-                        else:
-                           ops = None
-                        if hasattr(batter, 'go'):
-                           go = batter.go
-                        else:
-                           go = None
-                        if hasattr(batter, 'bo'):
-                           bo = batter.bo
-                        else:
-                           bo = None
+                        new_batter = ensure_attr_batter(batter)
+                        
                         cur.execute("""
                             INSERT into BatterStats(
                                 G_DATE,
@@ -133,7 +227,7 @@ def fill_db_with_past_games():
                                 AT_HOME,
                                 POS, 
                                 G_ID, 
-                                ID, 
+                                P_ID, 
                                 AB, 
                                 AVG, 
                                 HITS, 
@@ -165,69 +259,57 @@ def fill_db_with_past_games():
                                 SEA_HR,
                                 SEA_RBI,
                                 SEA_K,
-                                SEA_BB) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                SEA_BB) values(%s,%s,%s,%s,%s,%s,%s,%s,
+                                %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                                %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                                %s,%s,%s,%s,%s,%s)
                             """,
                             [
                                 game_date,
-                                batter.name_display_first_last,
-                                batter.name,
+                                new_batter['name_display_first_last'],
+                                new_batter['name'],
                                 game.home_team,
                                 True,
-                                batter.pos,
-                                game.game_id,
-                                batter.id,
-                                batter.ab,
-                                batter.avg,
-                                batter.h,
-                                batter.d,
-                                batter.t,
-                                batter.r,
-                                batter.rbi,
-                                batter.hr,
-                                slg,
-                                batter.obp,
-                                ops,
-                                batter.fldg,
-                                bo,
-                                batter.bb,
-                                batter.sb,
-                                batter.cs,
-                                batter.e,
-                                batter.hbp,
-                                batter.so,
-                                batter.sac,
-                                batter.sf,
-                                batter.lob,
-                                batter.ao,
-                                batter.po,
-                                batter.a,
-                                go,
-                                batter.s_h,
-                                batter.s_r,
-                                batter.s_hr,
-                                batter.s_rbi,
-                                batter.s_so,
-                                batter.s_bb
+                                new_batter['pos'],
+                                new_game['game_id'],
+                                new_batter['id'],
+                                new_batter['ab'],
+                                new_batter['avg'],
+                                new_batter['h'],
+                                new_batter['d'],
+                                new_batter['t'],
+                                new_batter['r'],
+                                new_batter['rbi'],
+                                new_batter['hr'],
+                                new_batter['slg'],
+                                new_batter['obp'],
+                                new_batter['ops'],
+                                new_batter['fldg'],
+                                new_batter['bo'],
+                                new_batter['bb'],
+                                new_batter['sb'],
+                                new_batter['cs'],
+                                new_batter['e'],
+                                new_batter['hbp'],
+                                new_batter['so'],
+                                new_batter['sac'],
+                                new_batter['sf'],
+                                new_batter['lob'],
+                                new_batter['ao'],
+                                new_batter['po'],
+                                new_batter['a'],
+                                new_batter['go'],
+                                new_batter['s_h'],
+                                new_batter['s_r'],
+                                new_batter['s_hr'],
+                                new_batter['s_rbi'],
+                                new_batter['s_so'],
+                                new_batter['s_bb']
                             ])
                         commit_to_db()
 
                     for batter in players['away_batting']:
-                        if hasattr(batter, 'slg'):
-                           slg = batter.slg
-                        else:
-                           slg = None
-                        if hasattr(batter, 'ops'):
-                           ops = batter.ops
-                        else:
-                           ops = None
-                        if hasattr(batter, 'go'):
-                           go = batter.go
-                        else:
-                           go = None
-                        if hasattr(batter, 'bo'):
-                           bo = batter.bo
-                        else:
-                           bo = None
+                        new_batter = ensure_attr_batter(batter)
                         cur.execute("""
                             INSERT into BatterStats(
                                 G_DATE,
@@ -237,7 +319,7 @@ def fill_db_with_past_games():
                                 AT_HOME,
                                 POS, 
                                 G_ID, 
-                                ID, 
+                                P_ID, 
                                 AB, 
                                 AVG, 
                                 HITS, 
@@ -269,69 +351,57 @@ def fill_db_with_past_games():
                                 SEA_HR,
                                 SEA_RBI,
                                 SEA_K,
-                                SEA_BB) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                SEA_BB) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                                %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                                %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                                %s,%s,%s)
                             """,
                             [
                                 game_date,
-                                batter.name_display_first_last,
-                                batter.name,
+                                new_batter['name_display_first_last'],
+                                new_batter['name'],
                                 game.away_team,
                                 False,
-                                batter.pos,
-                                game.game_id,
-                                batter.id,
-                                batter.ab,
-                                batter.avg,
-                                batter.h,
-                                batter.d,
-                                batter.t,
-                                batter.r,
-                                batter.rbi,
-                                batter.hr,
-                                slg,
-                                batter.obp,
-                                ops,
-                                batter.fldg,
-                                bo,
-                                batter.bb,
-                                batter.sb,
-                                batter.cs,
-                                batter.e,
-                                batter.hbp,
-                                batter.so,
-                                batter.sac,
-                                batter.sf,
-                                batter.lob,
-                                batter.ao,
-                                batter.po,
-                                batter.a,
-                                go,
-                                batter.s_h,
-                                batter.s_r,
-                                batter.s_hr,
-                                batter.s_rbi,
-                                batter.s_so,
-                                batter.s_bb
+                                new_batter['pos'],
+                                new_game['game_id'],
+                                new_batter['id'],
+                                new_batter['ab'],
+                                new_batter['avg'],
+                                new_batter['h'],
+                                new_batter['d'],
+                                new_batter['t'],
+                                new_batter['r'],
+                                new_batter['rbi'],
+                                new_batter['hr'],
+                                new_batter['slg'],
+                                new_batter['obp'],
+                                new_batter['ops'],
+                                new_batter['fldg'],
+                                new_batter['bo'],
+                                new_batter['bb'],
+                                new_batter['sb'],
+                                new_batter['cs'],
+                                new_batter['e'],
+                                new_batter['hbp'],
+                                new_batter['so'],
+                                new_batter['sac'],
+                                new_batter['sf'],
+                                new_batter['lob'],
+                                new_batter['ao'],
+                                new_batter['po'],
+                                new_batter['a'],
+                                new_batter['go'],
+                                new_batter['s_h'],
+                                new_batter['s_r'],
+                                new_batter['s_hr'],
+                                new_batter['s_rbi'],
+                                new_batter['s_so'],
+                                new_batter['s_bb']
                             ])
                         commit_to_db()
 
                     for pitcher in players['home_pitching']:
-                        if hasattr(pitcher, 'win'):
-                           win = pitcher.win
-                        else:
-                           win = None
-                        if hasattr(pitcher, 'loss'):
-                           loss = pitcher.loss
-                        else:
-                           loss = None
-                        if hasattr(pitcher, 'save'):
-                           save = pitcher.save
-                        else:
-                           save = None
-                        if hasattr(pitcher, 'note'):
-                           note = pitcher.note
-                        else:
-                           note = None
+                        new_pitcher = ensure_attr_pitcher(pitcher)
                         cur.execute("""
                             INSERT into PitcherStats(
                                 G_DATE,
@@ -341,7 +411,7 @@ def fill_db_with_past_games():
                                 AT_HOME,
                                 POS, 
                                 G_ID, 
-                                ID, 
+                                P_ID, 
                                 HITS, 
                                 RUNS, 
                                 HR, 
@@ -368,64 +438,51 @@ def fill_db_with_past_games():
                                 NOTE,
                                 SEA_ER,
                                 SEA_IP,
-                                S) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                S) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                                %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                                %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                             """,
                             [
                                 game_date,
-                                pitcher.name_display_first_last,
-                                pitcher.name,
+                                new_pitcher['name_display_first_last'],
+                                new_pitcher['name'],
                                 game.home_team,
                                 True,
-                                pitcher.pos,
-                                game.game_id,
-                                pitcher.id,
-                                pitcher.h,
-                                pitcher.r,
-                                pitcher.hr,
-                                pitcher.bb,
-                                pitcher.so,
-                                pitcher.s_h,
-                                pitcher.s_r,
-                                pitcher.s_so,
-                                pitcher.s_bb,
-                                pitcher.l,
-                                pitcher.w,
-                                pitcher.sv,
-                                pitcher.er,
-                                pitcher.hld,
-                                pitcher.bs,
-                                pitcher.out,
-                                pitcher.bf,
-                                pitcher.game_score,
-                                pitcher.era,
-                                pitcher.np,
-                                win,
-                                loss,
-                                save,
-                                note,
-                                pitcher.s_er,
-                                pitcher.s_ip,
-                                pitcher.s
+                                new_pitcher['pos'],
+                                new_game['game_id'],
+                                new_pitcher['id'],
+                                new_pitcher['h'],
+                                new_pitcher['r'],
+                                new_pitcher['hr'],
+                                new_pitcher['bb'],
+                                new_pitcher['so'],
+                                new_pitcher['s_h'],
+                                new_pitcher['s_r'],
+                                new_pitcher['s_so'],
+                                new_pitcher['s_bb'],
+                                new_pitcher['l'],
+                                new_pitcher['w'],
+                                new_pitcher['sv'],
+                                new_pitcher['er'],
+                                new_pitcher['hld'],
+                                new_pitcher['bs'],
+                                new_pitcher['out'],
+                                new_pitcher['bf'],
+                                new_pitcher['game_score'],
+                                new_pitcher['era'],
+                                new_pitcher['np'],
+                                new_pitcher['win'],
+                                new_pitcher['loss'],
+                                new_pitcher['save'],
+                                new_pitcher['note'],
+                                new_pitcher['s_er'],
+                                new_pitcher['s_ip'],
+                                new_pitcher['s']
                             ])
                     commit_to_db()
 
                     for pitcher in players['away_pitching']:
-                        if hasattr(pitcher, 'win'):
-                           win = pitcher.win
-                        else:
-                           win = None
-                        if hasattr(pitcher, 'loss'):
-                           loss = pitcher.loss
-                        else:
-                           loss = None
-                        if hasattr(pitcher, 'save'):
-                           save = pitcher.save
-                        else:
-                           save = None
-                        if hasattr(pitcher, 'note'):
-                           note = pitcher.note
-                        else:
-                           note = None
+                        new_pitcher = ensure_attr_pitcher(pitcher)
                         cur.execute("""
                             INSERT into PitcherStats(
                                 G_DATE,
@@ -435,7 +492,7 @@ def fill_db_with_past_games():
                                 AT_HOME,
                                 POS, 
                                 G_ID, 
-                                ID, 
+                                P_ID, 
                                 HITS, 
                                 RUNS, 
                                 HR, 
@@ -462,45 +519,48 @@ def fill_db_with_past_games():
                                 NOTE,
                                 SEA_ER,
                                 SEA_IP,
-                                S) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                S) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                                %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                                %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                             """,
                             [
                                 game_date,
-                                pitcher.name_display_first_last,
-                                pitcher.name,
+                                new_pitcher['name_display_first_last'],
+                                new_pitcher['name'],
                                 game.away_team,
                                 False,
-                                pitcher.pos,
-                                game.game_id,
-                                pitcher.id,
-                                pitcher.h,
-                                pitcher.r,
-                                pitcher.hr,
-                                pitcher.bb,
-                                pitcher.so,
-                                pitcher.s_h,
-                                pitcher.s_r,
-                                pitcher.s_so,
-                                pitcher.s_bb,
-                                pitcher.l,
-                                pitcher.w,
-                                pitcher.sv,
-                                pitcher.er,
-                                pitcher.hld,
-                                pitcher.bs,
-                                pitcher.out,
-                                pitcher.bf,
-                                pitcher.game_score,
-                                pitcher.era,
-                                pitcher.np,
-                                win,
-                                loss,
-                                save,
-                                note,
-                                pitcher.s_er,
-                                pitcher.s_ip,
-                                pitcher.s
+                                new_pitcher['pos'],
+                                new_game['game_id'],
+                                new_pitcher['id'],
+                                new_pitcher['h'],
+                                new_pitcher['r'],
+                                new_pitcher['hr'],
+                                new_pitcher['bb'],
+                                new_pitcher['so'],
+                                new_pitcher['s_h'],
+                                new_pitcher['s_r'],
+                                new_pitcher['s_so'],
+                                new_pitcher['s_bb'],
+                                new_pitcher['l'],
+                                new_pitcher['w'],
+                                new_pitcher['sv'],
+                                new_pitcher['er'],
+                                new_pitcher['hld'],
+                                new_pitcher['bs'],
+                                new_pitcher['out'],
+                                new_pitcher['bf'],
+                                new_pitcher['game_score'],
+                                new_pitcher['era'],
+                                new_pitcher['np'],
+                                new_pitcher['win'],
+                                new_pitcher['loss'],
+                                new_pitcher['save'],
+                                new_pitcher['note'],
+                                new_pitcher['s_er'],
+                                new_pitcher['s_ip'],
+                                new_pitcher['s']
                             ])
                         commit_to_db()
+                
 
 fill_db_with_past_games()

@@ -1,1 +1,1 @@
-# the-wrath-of-gogio
+# game-scout
