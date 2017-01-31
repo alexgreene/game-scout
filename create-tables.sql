@@ -120,3 +120,8 @@ create table PitcherStats (
    FOREIGN KEY (G_ID) REFERENCES Games (ID)
 );
 
+create table GamePrediction (
+   ID VARCHAR(50) PRIMARY KEY,
+   ONE_RUN_GAME BOOLEAN,
+   DIFF_WIN_PCT FLOAT
+);
