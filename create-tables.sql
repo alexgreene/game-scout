@@ -123,5 +123,9 @@ create table PitcherStats (
 create table GamePrediction (
    ID VARCHAR(50) PRIMARY KEY,
    ONE_RUN_GAME BOOLEAN,
-   DIFF_WIN_PCT FLOAT
+   DIFF_IN_WPCT FLOAT,
+   HT_WPCT_1RUN FLOAT,
+   AT_WPCT_1RUN FLOAT,
+   HT_WPCT_2RUN FLOAT,
+   AT_WPCT_2RUN FLOAT
 );
