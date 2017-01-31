@@ -155,6 +155,57 @@ def diff_in_win_pct(game_id):
 
    return abs(home_pct - away_pct)
 
+def get_run_diff(team, date):
+   cur.execute("""
+      SELECT
+         *
+      FROM
+         Games
+      Where
+         (HT = %s or AT = %s)
+         AND G_DATE < %s
+         AND YEAR(G_DATE) = %s
+   """, [team, team, date, str(date.year)])
+
+   games = cur.fetchall()
+
+   runs_scored = 0;
+   runs_allowed = 0;
+
+   if not games:
+      return 0
+   else:
+      for row in games:
+         game = create_game_obj(row)
+
+         if game['HT'] == team:
+            runs_scored += game['HT_RUNS']
+            runs_allowed += game['AT_RUNS']
+         else:
+            runs_scored += game['AT_RUNS']
+            runs_allowed += game['HT_RUNS']
+            
+      return runs_scored - runs_allowed
+   
+def get_run_differentials(game_id):
+   cur.execute("""
+      SELECT
+         *
+      FROM
+         Games
+      WHERE
+         ID = %s
+   """, game_id)
+
+   row = cur.fetchall()
+   game = create_game_obj(row[0])
+
+   home_diff = get_run_diff(game['HT'], game['G_DATE'])
+   away_diff = get_run_diff(game['AT'], game['G_DATE'])
+   diff_in_run_diffs = abs(home_diff - away_diff)
+
+   return (home_diff, away_diff, diff_in_run_diffs)
+
 #Main function to fill tensorflow db table
 def fill_tensorflow():
    game_ids = get_game_ids()
@@ -162,6 +213,7 @@ def fill_tensorflow():
    for game_id in game_ids:
       one_run_game = is_one_run_game(game_id)
       two_run_game = is_two_run_game(game_id)
+      run_diffs = get_run_differentials(game_id)
       
       if one_run_game:
          game = get_game(game_id)
@@ -187,8 +239,11 @@ def fill_tensorflow():
             HT_WPCT_1RUN,
             AT_WPCT_1RUN,
             HT_WPCT_2RUN,
-            AT_WPCT_2RUN
-         ) VALUES (%s,%s,%s,%s,%s,%s,%s)
+            AT_WPCT_2RUN,
+            RUN_DIFF_HT,
+            RUN_DIFF_AT,
+            DIFF_IN_RUN_DIFF
+         ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
       """,
       [
          game_id,
@@ -197,7 +252,10 @@ def fill_tensorflow():
          ht_wpct_one_run,
          at_wpct_one_run,
          ht_wpct_two_run,
-         at_wpct_two_run
+         at_wpct_two_run,
+         run_diffs[0],
+         run_diffs[1],
+         run_diffs[2]         
       ])
       commit_to_db()
 
