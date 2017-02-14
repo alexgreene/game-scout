@@ -3,10 +3,11 @@
 
 from gamescout_db import db, cur
 
-debug_flag = False
+debug_flag = True
 
-def commit_to_db():
+def commit_to_db(stmt, data):
    if debug_flag == False:
+      cur.executemany(stmt, data)
       db.commit()
 
 def get_game_ids():
@@ -87,7 +88,7 @@ def create_pitcher_obj(row):
    return p
 
 #Gets the win pct of a team up until the given date
-def get_win_pct(team, date, run_diff_limit):
+def get_win_pct(team, date, run_diff_limit = 0):
    if run_diff_limit:
       cur.execute("""
          SELECT
@@ -97,9 +98,8 @@ def get_win_pct(team, date, run_diff_limit):
          Where
             (HT = %s or AT = %s)
             AND G_DATE < %s
-            AND YEAR(G_DATE) = %s
-            AND (HT_RUNS - AT_RUNS == %s OR AT_RUNS - HT_RUNS == %s) 
-      """, [team, team, date, str(date.year), run_diff_limit, run_diff_limit])
+            AND (HT_RUNS - AT_RUNS = %s OR AT_RUNS - HT_RUNS = %s) 
+      """, [team, team, date, run_diff_limit, run_diff_limit])
    else:
       cur.execute("""
          SELECT
@@ -109,15 +109,14 @@ def get_win_pct(team, date, run_diff_limit):
          Where
             (HT = %s or AT = %s)
             AND G_DATE < %s
-            AND YEAR(G_DATE) = %s
-      """, [team, team, date, str(date.year)])
+      """, [team, team, date])
 
    games = cur.fetchall()
    totalGames = 0
    wins = 0
 
-   if not games:
-      return 0
+   if len(games) == 0:
+      return None
    else:
       for row in games:
          game = create_game_obj(row)
@@ -140,11 +139,10 @@ def get_rivalry_split(home_team, away_team, date):
          Games
       WHERE
          G_DATE < %s
-         AND YEAR(G_DATE) = %s
          AND ((HT=%s AND AT=%s AND HT_RUNS>AT_RUNS)
             OR (AT=%s AND HT=%s AND HT_RUNS<AT_RUNS))
-   """, [date, str(date.year), game['HT'], game['AT'], game['AT'], game['HT']])
-   wins_for_dominant_team = cur.fetchall()[0]
+   """, [date, home_team, away_team, away_team, home_team])
+   wins_for_dominant_team = cur.fetchall()[0][0]
 
    cur.execute("""
       SELECT
@@ -153,12 +151,11 @@ def get_rivalry_split(home_team, away_team, date):
          Games
       WHERE
          G_DATE < %s
-         AND YEAR(G_DATE) = %s
          AND ((HT=%s AND AT=%s) OR (AT=%s AND HT=%s))
-   """, [date, str(date.year), game['HT'], game['AT'], game['AT'], game['HT']])
-   total_games_in_rivalry = cur.fetchall()[0]
+   """, [date, home_team, away_team, away_team, home_team])
+   total_games_in_rivalry = cur.fetchall()[0][0]
 
-   rivalry_split = wins_for_dominant_team / total_games_in_rivalry
+   rivalry_split = wins_for_dominant_team / total_games_in_rivalry if total_games_in_rivalry != 0 else None
    return rivalry_split
 
 def get_run_diff(team, date):
@@ -170,8 +167,7 @@ def get_run_diff(team, date):
       Where
          (HT = %s or AT = %s)
          AND G_DATE < %s
-         AND YEAR(G_DATE) = %s
-   """, [team, team, date, str(date.year)])
+   """, [team, team, date])
 
    games = cur.fetchall()
    rs = 0; ra = 0
@@ -179,7 +175,7 @@ def get_run_diff(team, date):
    rs_loss = 0; ra_loss = 0
 
    if not games:
-      return 0
+      return (None,None,None,None,None)
    else:
       for row in games:
          game = create_game_obj(row)
@@ -204,28 +200,58 @@ def get_run_diff(team, date):
             else:
                rs_loss += game['AT_RUNS']
                ra_loss += game['HT_RUNS']
-            
-      return (rs-ra, rs_win/len(games), ra_win/len(games), 
-         rs_loss/len(games), ra_loss/len(games))
+           
+      run_diff = rs - ra
+      avg_rs_win = rs_win/len(games) if rs_win != 0 else None
+      avg_ra_win = ra_win/len(games) if ra_win != 0 else None
+      avg_rs_loss = rs_loss/len(games) if rs_loss != 0 else None
+      avg_ra_loss = ra_loss/len(games) if ra_loss != 0 else None
+      
+      return (run_diff, avg_rs_win, avg_ra_win, avg_rs_loss, avg_ra_loss)
    
-def get_run_differentials(game_id):
+#average hrs for a team in the past 10 games
+def get_avg_hrs_per_team(team, g_date):
    cur.execute("""
       SELECT
-         *
+         ID
       FROM
-         Games
+         GAMES
       WHERE
-         ID = %s
-   """, game_id)
-
+         (HT = %s OR AT = %s)
+      AND G_DATE < %s
+      ORDER BY G_DATE DESC
+      LIMIT 10
+   """, [team, team, g_date])
    row = cur.fetchall()
-   game = create_game_obj(row[0])
-   h_diff, h_rs_w, h_ra_w, h_rs_l, h_ra_l = get_run_diff(game['HT'], game['G_DATE'])
-   a_diff, a_rs_w, a_ra_w, a_rs_l, a_ra_l = get_run_diff(game['AT'], game['G_DATE'])
-   return (h_diff, h_rs_w, h_ra_w, h_rs_l, h_ra_l, 
-      a_diff, a_rs_w, a_ra_w, a_rs_l, a_ra_l)
 
-def get_pitcher_stats(game_id):
+   if len(row) == 0:
+      return None
+   else:
+      hrs = 0
+      games = 0
+      for past_game in row:
+         g_id = past_game[0]
+         cur.execute("""
+            SELECT
+               TEAM, SUM(HR)
+            FROM
+               BatterStats
+            WHERE
+               G_ID = %s
+               GROUP BY TEAM
+         """, [g_id])
+
+         hr = cur.fetchall()
+         if len(hr):
+            games += 1
+            if hr[0][0] == team:
+               hrs += hr[0][1]
+            else:
+               hrs += hr[1][1]
+      
+      return round(hrs/games, 3) if games != 0 else None
+
+def get_pitcher_stats(game_id, g_date):
    cur.execute("""
       SELECT
          *
@@ -238,109 +264,131 @@ def get_pitcher_stats(game_id):
    """, game_id)
 
    row = cur.fetchall()
-   hp = create_pitcher_obj(row[0])
+   if row:
+      hp = create_pitcher_obj(row[0])
 
-   cur.execute("""
-      SELECT
-         count(*)
-      FROM
-         PitcherStats
-      WHERE
-         P_ID = %s
-   """, hp['P_ID'])
-   row = cur.fetchall()
-   hp_avg_ip = row[0]
+      cur.execute("""
+         SELECT
+            count(*)
+         FROM
+            PitcherStats
+         WHERE
+            P_ID = %s
+            AND G_DATE < %s
+      """, [hp['P_ID'], g_date])
+      row = cur.fetchall()
+      hp_tot_g = row[0][0]
 
-   cur.execute("""
-      SELECT
-         *
-      FROM
-         PitcherStats
-      WHERE
-         G_ID = %s
-      AND AT_HOME = 0
-      LIMIT 1
-   """, game_id)
+      hp_avg_ip = hp['SEA_IP']/hp_tot_g if hp_tot_g != 0 else None
 
-   row = cur.fetchall()
-   ap = create_pitcher_obj(row[0])
+      cur.execute("""
+         SELECT
+            *
+         FROM
+            PitcherStats
+         WHERE
+            G_ID = %s
+         AND AT_HOME = 0
+         LIMIT 1
+      """, game_id)
 
-   cur.execute("""
-      SELECT
-         count(*)
-      FROM
-         PitcherStats
-      WHERE
-         P_ID = %s
-   """, hp['P_ID'])
-   row = cur.fetchall()
-   ap_avg_ip = row[0]
+      row = cur.fetchall()
+      ap = create_pitcher_obj(row[0])
 
-   return (
-      x_per_nine(hp['SEA_RUNS'], hp['SEA_IP']),
-      x_per_nine(hp['SEA_BB'], hp['SEA_IP']),
-      x_per_nine(hp['SEA_HITS'], hp['SEA_IP']),
-      x_per_nine(hp['SEA_K'], hp['SEA_IP']),
-      hp['SEA_IP'],
-      hp['ERA'],
-      x_per_nine(ap['SEA_RUNS'], ap['SEA_IP']),
-      x_per_nine(ap['SEA_BB'], ap['SEA_IP']),
-      x_per_nine(ap['SEA_HITS'], ap['SEA_IP']),
-      x_per_nine(ap['SEA_K'], ap['SEA_IP']),
-      ap['SEA_IP'],
-      ap['ERA'])
+      cur.execute("""
+         SELECT
+            count(*)
+         FROM
+            PitcherStats
+         WHERE
+            P_ID = %s
+            AND G_DATE < %s
+      """, [hp['P_ID'], g_date])
+      row = cur.fetchall()
+      ap_tot_g = row[0][0]
+
+      ap_avg_ip = ap['SEA_IP']/ap_tot_g if ap_tot_g != 0 else None
+      return (
+         x_per_nine(hp['SEA_RUNS'], hp['SEA_IP']),
+         x_per_nine(hp['SEA_BB'], hp['SEA_IP']),
+         x_per_nine(hp['SEA_HITS'], hp['SEA_IP']),
+         x_per_nine(hp['SEA_K'], hp['SEA_IP']),
+         hp['SEA_IP'],
+         hp['ERA'],
+         hp_avg_ip,
+         x_per_nine(ap['SEA_RUNS'], ap['SEA_IP']),
+         x_per_nine(ap['SEA_BB'], ap['SEA_IP']),
+         x_per_nine(ap['SEA_HITS'], ap['SEA_IP']),
+         x_per_nine(ap['SEA_K'], ap['SEA_IP']),
+         ap['SEA_IP'],
+         ap['ERA'],
+         ap_avg_ip)
+   else:
+      return (None,None,None,None,None,None,None,None,None,None,None,None,None,None)
 
 def x_per_nine(x, ip):
-   return 0 if ip == 0 else (x * 9) / ip
+   return None if ip == 0 else (x * 9) / ip
 
-def get_position_averages(home_team, away_team, date):
-   cur.execute("""
-      SELECT
-         SUM(AB), SUM(H)
-      FROM
-         BatterStats
-      Where
-         G_ID=%s
-         AND G_DATE < %s
-         AND YEAR(G_DATE) = %s
-         AND POS LIKE '%1B%'
-   """, [game_id, date, str(date.year)])
+def get_position_averages(game_id, home_team, away_team, date):
+   positions = ['%P%','%C%','%1B%','%2B%','%3B%','%SS%','%LF%','%CF%','%RF%']
+   ht_avgs = {}
 
-   row = cur.fetchall()
+   for pos in positions:
+      cur.execute("""
+         SELECT
+            SUM(AB), SUM(HITS)
+         FROM
+            BatterStats
+         Where
+            TEAM = %s
+            AND G_DATE < %s
+            AND POS LIKE %s
+            ORDER BY G_DATE DESC
+            LIMIT 10
+      """, [home_team, date, pos])
 
-   #fb = sum of AB / sum of H
-   
-   # and then repeat this for each of the positions
+      row = cur.fetchall()[0]
+      ab = row[0]
+      hits = row[1]
+      
+      ht_avgs[(pos[1:-1])] = hits/ab if ab is not None and ab != 0 else None
+      
+   at_avgs = {}
 
-   return (p, c, fb, sb, tb, ss, lf, cf, rf)
+   for pos in positions:
+      cur.execute("""
+         SELECT
+            SUM(AB), SUM(HITS)
+         FROM
+            BatterStats
+         Where
+            TEAM = %s
+            AND G_DATE < %s
+            AND POS LIKE %s
+            ORDER BY G_DATE DESC
+            LIMIT 10
+      """, [away_team, date, pos])
+
+      row = cur.fetchall()[0]
+      ab = row[0]
+      hits = row[1]
+
+      at_avgs[(pos[1:-1])] = hits/ab if ab is not None and ab != 0 else None
+
+   return (ht_avgs, at_avgs)
 
 #Main function to fill tensorflow db table
 def fill_tensorflow():
-   game_ids = get_game_ids()
-
-   for game_id in game_ids:
-      one_run_game = is_one_run_game(game_id)
-
-      game = get_game(game_id)
-      ht_wpct = get_win_pct(game['HT'], game['G_DATE'])
-      ht_wpct_1r = get_win_pct(game['HT'], game['G_DATE'], 1)
-      ht_wpct_2r = get_win_pct(game['HT'], game['G_DATE'], 2)
-      at_wpct = get_win_pct(game['AT'], game['G_DATE'])
-      at_wpct_1r = get_win_pct(game['AT'], game['G_DATE'], 1)
-      at_wpct_2r = get_win_pct(game['AT'], game['G_DATE'], 2)
-
-      ht_run_diff, ht_avg_rs_w, ht_avg_ra_w, ht_avg_rs_l, ht_avg_ra_l, 
-      at_run_diff, at_avg_rs_w, at_avg_ra_w, at_avg_rs_l, at_avg_ra_l = get_run_differentials(game_id)
-
-      hp_r_per9, hp_bb_per9, hp_h_per9, hp_k_per9, hp_ip, hp_era, hp_avg_ip
-      ap_r_per9, ap_bb_per9, ap_h_per9, ap_k_per9, ap_ip, ap_era, ap_avg_ip = get_pitcher_stats(game_id)
-
-      rivalry_split = get_rivalry_split(game['HT'], game['AT'], game['G_DATE'])
-
-      cur.execute("""
+   count = 0
+   data = []
+   stmt = """
          INSERT into GamePrediction (
             ID,
+            G_DATE,
+            HT,
+            AT,
             ONE_RUN_GAME,
+            RIVALRY_SPLIT,
             HT_WPCT,
             HT_WPCT_1R,
             HT_WPCT_2R,
@@ -371,11 +419,60 @@ def fill_tensorflow():
             AP_IP, 
             AP_ERA,
             AP_AVG_IP,
-         ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-      """,
-      [
+            HT_P_AVG,
+            HT_C_AVG,
+            HT_1B_AVG,
+            HT_2B_AVG,
+            HT_3B_AVG,
+            HT_SS_AVG,
+            HT_LF_AVG,
+            HT_CF_AVG,
+            HT_RF_AVG,
+            AT_P_AVG,
+            AT_C_AVG,
+            AT_1B_AVG,
+            AT_2B_AVG,
+            AT_3B_AVG,
+            AT_SS_AVG,
+            AT_LF_AVG,
+            AT_CF_AVG,
+            AT_RF_AVG,
+            HT_AVG_HRS,
+            AT_AVG_HRS 
+         ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+            %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+            %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+      """
+   game_ids = get_game_ids()
+
+   for game_id in game_ids:
+      one_run_game = is_one_run_game(game_id)
+
+      game = get_game(game_id)
+      ht_avg_hrs = get_avg_hrs_per_team(game['HT'], game['G_DATE'])
+      at_avg_hrs = get_avg_hrs_per_team(game['AT'], game['G_DATE'])
+      (ht_avgs, at_avgs) = get_position_averages(game_id, game['HT'], game['AT'], game['G_DATE'])
+      ht_wpct = get_win_pct(game['HT'], game['G_DATE'])
+      ht_wpct_1r = get_win_pct(game['HT'], game['G_DATE'], 1)
+      ht_wpct_2r = get_win_pct(game['HT'], game['G_DATE'], 2)
+      at_wpct = get_win_pct(game['AT'], game['G_DATE'])
+      at_wpct_1r = get_win_pct(game['AT'], game['G_DATE'], 1)
+      at_wpct_2r = get_win_pct(game['AT'], game['G_DATE'], 2)
+
+      ht_run_diff, ht_avg_rs_w, ht_avg_ra_w, ht_avg_rs_l, ht_avg_ra_l = get_run_diff(game['HT'], game['G_DATE'])
+      at_run_diff, at_avg_rs_w, at_avg_ra_w, at_avg_rs_l, at_avg_ra_l = get_run_diff(game['AT'], game['G_DATE']) 
+
+      hp_r_per9, hp_bb_per9, hp_h_per9, hp_k_per9, hp_ip, hp_era, hp_avg_ip, ap_r_per9, ap_bb_per9, ap_h_per9, ap_k_per9, ap_ip, ap_era, ap_avg_ip = get_pitcher_stats(game_id, game['G_DATE'])
+
+      rivalry_split = get_rivalry_split(game['HT'], game['AT'], game['G_DATE'])
+
+      row = (
          game_id,
-         one_run_game,
+         game['G_DATE'],
+         game['HT'], 
+         game['AT'], 
+         one_run_game, 
+         rivalry_split,
          ht_wpct,
          ht_wpct_1r,
          ht_wpct_2r,
@@ -405,8 +502,32 @@ def fill_tensorflow():
          ap_k_per9, 
          ap_ip, 
          ap_era,
-         ap_avg_ip
-      ])
-      commit_to_db()
+         ap_avg_ip,
+         ht_avgs['P'],
+         ht_avgs['C'],
+         ht_avgs['1B'],
+         ht_avgs['2B'],
+         ht_avgs['3B'],
+         ht_avgs['SS'],
+         ht_avgs['LF'],
+         ht_avgs['CF'],
+         ht_avgs['RF'],
+         at_avgs['P'],
+         at_avgs['C'],
+         at_avgs['1B'],
+         at_avgs['2B'],
+         at_avgs['3B'],
+         at_avgs['SS'],
+         at_avgs['LF'],
+         at_avgs['CF'],
+         at_avgs['RF'],
+         ht_avg_hrs,
+         at_avg_hrs
+      )
+      data.append(row)
+      count += 1
+      print("Count: " + str(count) + " G_ID: " + game_id[0])
+   commit_to_db(stmt, data)
+      
 
 fill_tensorflow()
