@@ -180,3 +180,10 @@ create table GamePrediction (
    HT_AVG_HRS INTEGER,
    AT_AVG_HRS INTEGER
 );
+
+create table PastTenGames (
+   ID INTEGER AUTO_INCREMENT PRIMARY KEY,
+   G_ID VARCHAR(50),
+   PAST_GAME VARCHAR(50),
+   IS_HOME BOOLEAN   
+);
