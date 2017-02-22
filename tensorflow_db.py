@@ -2,7 +2,6 @@
 #Authors: Alex Greene & Giancarlo Tarantino
 
 from gamescout_db import db, cur
-import datetime
 debug_flag = True
 
 def commit_to_db(stmt, data):
@@ -469,42 +468,28 @@ def fill_tensorflow():
    game_ids = get_game_ids()
 
    for game_id in game_ids:
-      a = datetime.datetime.now()
       one_run_game = is_one_run_game(game_id)
-      b = datetime.datetime.now()
 
       game = get_game(game_id)
-      c = datetime.datetime.now()
       ht_avg_hrs = get_avg_hrs_per_team(game_id, game['HT'], 1)
-      d = datetime.datetime.now()
+      print(ht_avg_hrs)
       at_avg_hrs = get_avg_hrs_per_team(game_id, game['AT'], 0)
-      e = datetime.datetime.now()
+      print(at_avg_hrs)
       (ht_avgs, at_avgs) = get_position_averages(game_id)
-      f = datetime.datetime.now()
       ht_wpct = get_win_pct(game['HT'], game['G_DATE'])
-      g = datetime.datetime.now()
       ht_wpct_1r = get_win_pct(game['HT'], game['G_DATE'], 1)
-      h = datetime.datetime.now()
       ht_wpct_2r = get_win_pct(game['HT'], game['G_DATE'], 2)
-      i = datetime.datetime.now()
       at_wpct = get_win_pct(game['AT'], game['G_DATE'])
-      j = datetime.datetime.now()
       at_wpct_1r = get_win_pct(game['AT'], game['G_DATE'], 1)
-      k = datetime.datetime.now()
       at_wpct_2r = get_win_pct(game['AT'], game['G_DATE'], 2)
-      l = datetime.datetime.now()
 
       ht_run_diff, ht_avg_rs_w, ht_avg_ra_w, ht_avg_rs_l, ht_avg_ra_l = get_run_diff(game['HT'], game['G_DATE'])
-      m = datetime.datetime.now()
       at_run_diff, at_avg_rs_w, at_avg_ra_w, at_avg_rs_l, at_avg_ra_l = get_run_diff(game['AT'], game['G_DATE']) 
-      n = datetime.datetime.now()
 
       hp_r_per9, hp_bb_per9, hp_h_per9, hp_k_per9, hp_ip, hp_era, hp_avg_ip, ap_r_per9, ap_bb_per9, ap_h_per9, ap_k_per9, ap_ip, ap_era, ap_avg_ip = get_pitcher_stats(game_id, game['G_DATE'])
 
-      o = datetime.datetime.now()
       rivalry_split = get_rivalry_split(game['HT'], game['AT'], game['G_DATE'])
 
-      p = datetime.datetime.now() 
    
       row = (
          game_id,
