@@ -177,8 +177,8 @@ create table GamePrediction (
    AT_LF_AVG FLOAT,
    AT_CF_AVG FLOAT,
    AT_RF_AVG FLOAT,
-   HT_AVG_HRS INTEGER,
-   AT_AVG_HRS INTEGER
+   HT_AVG_HRS FLOAT,
+   AT_AVG_HRS FLOAT
 );
 
 create table PastTenGames (
