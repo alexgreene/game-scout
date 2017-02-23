@@ -87,6 +87,9 @@ LABEL_COLUMN = 'ONE_RUN_GAME'
 def build_estimator(model_dir, model_type):
   """Build an estimator."""
 
+  #HT
+  #AT
+  
   # Continuous base columns.
   HT_WPCT = tf.contrib.layers.real_valued_column("HT_WPCT")
   HT_WPCT_1R = tf.contrib.layers.real_valued_column("HT_WPCT_1R")
@@ -227,8 +230,8 @@ def input_fn(df):
 def train_and_eval(model_dir, model_type, train_steps, train_data, test_data):
   """Train and evaluate the model."""
 
-  df_train = pd.read_sql('select * from GamePrediction;', columns=COLUMNS, con=db) 
-  df_test = pd.read_sql('select * from GamePrediction;', columns=COLUMNS, con=db) 
+  df_train = pd.read_sql('select * from GamePrediction where G_DATE < "2012-05-11";', columns=COLUMNS, con=db) 
+  df_test = pd.read_sql('select * from GamePrediction where G_DATE > "2012-05-11";', columns=COLUMNS, con=db) 
 
   # remove NaN elements
   df_train = df_train.dropna(how='any', axis=0)

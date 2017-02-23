@@ -154,7 +154,10 @@ def get_rivalry_split(home_team, away_team, date):
    """, [date, home_team, away_team, away_team, home_team])
    total_games_in_rivalry = cur.fetchall()[0][0]
 
-   rivalry_split = wins_for_dominant_team / total_games_in_rivalry if total_games_in_rivalry != 0 else None
+   rivalry_split = float(wins_for_dominant_team) / float(total_games_in_rivalry) if total_games_in_rivalry != 0 else None
+   print wins_for_dominant_team
+   print total_games_in_rivalry
+   print rivalry_split
    return rivalry_split
 
 def get_run_diff(team, date):
@@ -472,9 +475,7 @@ def fill_tensorflow():
 
       game = get_game(game_id)
       ht_avg_hrs = get_avg_hrs_per_team(game_id, game['HT'], 1)
-      print(ht_avg_hrs)
       at_avg_hrs = get_avg_hrs_per_team(game_id, game['AT'], 0)
-      print(at_avg_hrs)
       (ht_avgs, at_avgs) = get_position_averages(game_id)
       ht_wpct = get_win_pct(game['HT'], game['G_DATE'])
       ht_wpct_1r = get_win_pct(game['HT'], game['G_DATE'], 1)
