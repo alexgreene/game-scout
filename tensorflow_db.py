@@ -205,10 +205,10 @@ def get_run_diff(team, date):
            
       run_diff = rs - ra
 
-      avg_rs_win = rs_win/len(games) if rs_win != 0 else None
-      avg_ra_win = ra_win/len(games) if ra_win != 0 else None
-      avg_rs_loss = rs_loss/len(games) if rs_loss != 0 else None
-      avg_ra_loss = ra_loss/len(games) if ra_loss != 0 else None
+      avg_rs_win = float(rs_win)/float(len(games)) if rs_win != 0 else None
+      avg_ra_win = float(ra_win)/float(len(games)) if ra_win != 0 else None
+      avg_rs_loss = float(rs_loss)/float(len(games)) if rs_loss != 0 else None
+      avg_ra_loss = float(ra_loss)/float(len(games)) if ra_loss != 0 else None
       
       return (run_diff, avg_rs_win, avg_ra_win, avg_rs_loss, avg_ra_loss)
    
@@ -250,7 +250,7 @@ def get_avg_hrs_per_team(game_id, team, is_home):
             else:
                hrs += hr[1][1]
       
-      return round(hrs/games, 3) if games != 0 else None
+      return round(float(hrs)/float(games), 3) if games != 0 else None
 
 def get_pitcher_stats(game_id, g_date):
    cur.execute("""
@@ -280,7 +280,7 @@ def get_pitcher_stats(game_id, g_date):
       row = cur.fetchall()
       hp_tot_g = row[0][0]
 
-      hp_avg_ip = hp['SEA_IP']/hp_tot_g if hp_tot_g != 0 else None
+      hp_avg_ip = float(hp['SEA_IP'])/float(hp_tot_g) if hp_tot_g != 0 else None
 
       cur.execute("""
          SELECT
@@ -308,7 +308,7 @@ def get_pitcher_stats(game_id, g_date):
       row = cur.fetchall()
       ap_tot_g = row[0][0]
 
-      ap_avg_ip = ap['SEA_IP']/ap_tot_g if ap_tot_g != 0 else None
+      ap_avg_ip = float(ap['SEA_IP'])/float(ap_tot_g) if ap_tot_g != 0 else None
       return (
          x_per_nine(hp['SEA_RUNS'], hp['SEA_IP']),
          x_per_nine(hp['SEA_BB'], hp['SEA_IP']),
@@ -328,7 +328,7 @@ def get_pitcher_stats(game_id, g_date):
       return (None,None,None,None,None,None,None,None,None,None,None,None,None,None)
 
 def x_per_nine(x, ip):
-   return None if ip == 0 else (x * 9) / ip
+   return None if ip == 0 else float(x * 9) / float(ip)
 
 def get_position_averages(game_id):
    positions = ['%P%','%C%','%1B%','%2B%','%3B%','%SS%','%LF%','%CF%','%RF%']
@@ -364,7 +364,7 @@ def get_position_averages(game_id):
          ab += row[0] if row[0] is not None else 0
          hits += row[1] if row[1] is not None else 0
       
-      ht_avgs[(pos[1:-1])] = hits/ab if ab is not None and ab != 0 else None
+      ht_avgs[(pos[1:-1])] = float(hits)/float(ab) if ab is not None and ab != 0 else None
 
    at_avgs = {}
 
@@ -398,7 +398,7 @@ def get_position_averages(game_id):
          ab += row[0] if row[0] is not None else 0
          hits += row[1] if row[1] is not None else 0
       
-      at_avgs[(pos[1:-1])] = hits/ab if ab is not None and ab != 0 else None
+      at_avgs[(pos[1:-1])] = float(hits)/float(ab) if ab is not None and ab != 0 else None
 
    return (ht_avgs, at_avgs)
 
