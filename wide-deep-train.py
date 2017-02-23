@@ -29,8 +29,12 @@ import tensorflow as tf
 
 from gamescout_db import db, cur
 
+tf.logging.set_verbosity(tf.logging.INFO)
+
 COLUMNS = [
   'ONE_RUN_GAME',
+  'HT',
+  'AT',
   'HT_WPCT',
   'HT_WPCT_1R',
   'HT_WPCT_2R',
@@ -81,6 +85,60 @@ COLUMNS = [
   'AT_RF_AVG',
   'HT_AVG_HRS',
   'AT_AVG_HRS']
+
+CONTINUOUS_COLUMNS = [
+  'HT_WPCT',
+  'HT_WPCT_1R',
+  'HT_WPCT_2R',
+  'AT_WPCT',
+  'AT_WPCT_1R',
+  'AT_WPCT_2R',
+  'HT_RUN_DIFF',
+  'HT_AVG_RS_WIN',
+  'HT_AVG_RA_WIN',
+  'HT_AVG_RS_LOSS',
+  'HT_AVG_RA_LOSS',
+  'AT_RUN_DIFF',
+  'AT_AVG_RS_WIN',
+  'AT_AVG_RA_WIN',
+  'AT_AVG_RS_LOSS',
+  'AT_AVG_RA_LOSS',
+  'HP_RUNS_PER_9',
+  'HP_BB_PER_9',
+  'HP_H_PER_9',
+  'HP_K_PER_9',
+  'HP_IP',
+  'HP_ERA',
+  'HP_AVG_IP',
+  'AP_RUNS_PER_9',
+  'AP_BB_PER_9',
+  'AP_H_PER_9',
+  'AP_K_PER_9',
+  'AP_IP',
+  'AP_ERA',
+  'AP_AVG_IP',
+  'HT_P_AVG',
+  'HT_C_AVG',
+  'HT_1B_AVG',
+  'HT_2B_AVG',
+  'HT_3B_AVG',
+  'HT_SS_AVG',
+  'HT_LF_AVG',
+  'HT_CF_AVG',
+  'HT_RF_AVG',
+  'AT_P_AVG',
+  'AT_C_AVG',
+  'AT_1B_AVG',
+  'AT_2B_AVG',
+  'AT_3B_AVG',
+  'AT_SS_AVG',
+  'AT_LF_AVG',
+  'AT_CF_AVG',
+  'AT_RF_AVG',
+  'HT_AVG_HRS',
+  'AT_AVG_HRS']
+
+CATEGORICAL_COLUMNS = ["HT", "AT"]
 
 LABEL_COLUMN = 'ONE_RUN_GAME'
 
@@ -142,8 +200,16 @@ def build_estimator(model_dir, model_type):
   HT_AVG_HRS = tf.contrib.layers.real_valued_column("HT_AVG_HRS")
   AT_AVG_HRS = tf.contrib.layers.real_valued_column("AT_AVG_HRS")
 
+  # Sparse base columns.
+  HT = tf.contrib.layers.sparse_column_with_hash_bucket(
+    "HT", hash_bucket_size=50)
+  AT = tf.contrib.layers.sparse_column_with_hash_bucket(
+    "AT", hash_bucket_size=50)
+
+  cat_columns = [HT, AT]
+
   # Wide columns and deep columns.
-  _columns = [
+  num_columns = [
     HT_WPCT,
     HT_WPCT_1R,
     HT_WPCT_2R,
@@ -197,30 +263,38 @@ def build_estimator(model_dir, model_type):
   ]
 
 
-  if model_type == "wide":
-    m = tf.contrib.learn.LinearClassifier(model_dir=model_dir,
-                                          feature_columns=_columns)
-  elif model_type == "deep":
-    m = tf.contrib.learn.DNNClassifier(model_dir=model_dir,
-                                       feature_columns=_columns,
-                                       hidden_units=[100, 50])
-  else:
-    m = tf.contrib.learn.DNNLinearCombinedClassifier(
-        model_dir=model_dir,
-        linear_feature_columns=_columns,
-        dnn_feature_columns=_columns,
-        dnn_hidden_units=[100, 50])
-  return m
+  # if model_type == "wide":
+  #   m = tf.contrib.learn.LinearClassifier(model_dir=model_dir,
+  #                                         feature_columns=_columns)
+  # elif model_type == "deep":
+  #   m = tf.contrib.learn.DNNClassifier(model_dir=model_dir,
+  #                                      feature_columns=_columns,
+  #                                      hidden_units=[100, 50])
+  
+  return tf.contrib.learn.DNNLinearCombinedClassifier(
+      model_dir=model_dir,
+      linear_feature_columns=cat_columns,
+      dnn_feature_columns=num_columns,
+      dnn_hidden_units=[100, 50])
 
 
 def input_fn(df):
   """Input builder function."""
   # Creates a dictionary mapping from each continuous feature column name (k) to
   # the values of that column stored in a constant Tensor.
-  continuous_cols = {k: tf.constant(df[k].values) for k in COLUMNS}
+  continuous_cols = {k: tf.constant(df[k].values) for k in CONTINUOUS_COLUMNS}
+
+  categorical_cols = {
+    k: tf.SparseTensor(
+      indices=[[i, 0] for i in range(df[k].size)],
+      values=df[k].values,
+      shape=[df[k].size, 1])
+    for k in CATEGORICAL_COLUMNS
+  }
 
   # Merges the two dictionaries into one.
   feature_cols = dict(continuous_cols)
+  feature_cols.update(categorical_cols)
   # Converts the label column into a constant Tensor.
   label = tf.constant(df[LABEL_COLUMN].values)
   # Returns the feature columns and the label.
@@ -230,8 +304,8 @@ def input_fn(df):
 def train_and_eval(model_dir, model_type, train_steps, train_data, test_data):
   """Train and evaluate the model."""
 
-  df_train = pd.read_sql('select * from GamePrediction where G_DATE < "2012-05-11";', columns=COLUMNS, con=db) 
-  df_test = pd.read_sql('select * from GamePrediction where G_DATE > "2012-05-11";', columns=COLUMNS, con=db) 
+  df_train = pd.read_sql('select * from GamePrediction where G_DATE < "2015-07-14";', columns=COLUMNS, con=db) 
+  df_test = pd.read_sql('select * from GamePrediction where G_DATE > "2015-07-14";', columns=COLUMNS, con=db) 
 
   # remove NaN elements
   df_train = df_train.dropna(how='any', axis=0)
@@ -240,8 +314,31 @@ def train_and_eval(model_dir, model_type, train_steps, train_data, test_data):
   model_dir = tempfile.mkdtemp() if not model_dir else model_dir
   print("model directory = %s" % model_dir)
 
+  validation_metrics = {
+    "accuracy":
+        tf.contrib.learn.metric_spec.MetricSpec(
+            metric_fn=tf.contrib.metrics.streaming_accuracy,
+            prediction_key=tf.contrib.learn.prediction_key.PredictionKey.
+            CLASSES),
+    "precision":
+        tf.contrib.learn.metric_spec.MetricSpec(
+            metric_fn=tf.contrib.metrics.streaming_precision,
+            prediction_key=tf.contrib.learn.prediction_key.PredictionKey.
+            CLASSES),
+    "recall":
+        tf.contrib.learn.metric_spec.MetricSpec(
+            metric_fn=tf.contrib.metrics.streaming_recall,
+            prediction_key=tf.contrib.learn.prediction_key.PredictionKey.
+            CLASSES)
+  }
+
+  validation_monitor = tf.contrib.learn.monitors.ValidationMonitor(
+    input_fn=lambda: input_fn(df_train),
+    every_n_steps=500,
+    metrics=validation_metrics)
+
   m = build_estimator(model_dir, model_type)
-  m.fit(input_fn=lambda: input_fn(df_train), steps=train_steps)
+  m.fit(input_fn=lambda: input_fn(df_train), steps=train_steps, monitors=[validation_monitor])
   results = m.evaluate(input_fn=lambda: input_fn(df_test), steps=1)
   for key in sorted(results):
     print("%s: %s" % (key, results[key]))
