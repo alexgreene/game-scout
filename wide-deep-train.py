@@ -201,10 +201,27 @@ def build_estimator(model_dir, model_type):
   AT_AVG_HRS = tf.contrib.layers.real_valued_column("AT_AVG_HRS")
 
   # Sparse base columns.
-  HT = tf.contrib.layers.sparse_column_with_hash_bucket(
-    "HT", hash_bucket_size=50)
-  AT = tf.contrib.layers.sparse_column_with_hash_bucket(
-    "AT", hash_bucket_size=50)
+  HT = tf.contrib.layers.sparse_column_with_keys(column_name="HT",
+     keys=["Rays", "White Sox", "Athletics", "Royals", "Mets", "Nationals",
+           "Yankees", "Dodgers", "Padres", "D-backs", "Indians", "Angels",
+           "Pirates", "Rangers", "Reds", "Brewers", "Blue Jays", "Rockies",
+           "Cubs", "Cardinals", "Giants", "Astros", "Braves", "Twins",
+           "Marlins", "Phillies", "Red Sox", "Tigers", "Orioles", "Mariners",
+           "Hooks", "Express", "Mudcats", "Tides", "Mud Hens", "RoughRiders",
+           "American", "National", "Barons", "Blue Wahoos", "Redbirds", "Bats",
+           "Biscuts", "AL All-Stars"
+          ])
+  
+  AT = tf.contrib.layers.sparse_column_with_keys(column_name="AT",
+     keys=["Angels", "D-backs", "Orioles", "White Sox", "Indians", "Tigers",
+           "Dodgers", "Marlins", "Yankees", "Phillies", "Padres", "Pirates",
+           "Mariners", "Rangers", "Nationals", "Braves", "Cubs", "Reds",
+           "Rockies", "Astros", "Royals", "Twins", "Giants", "Cardinals",
+           "Rays", "Blue Jays", "Red Sox", "Brewers", "Mets", "Mocs",
+           "Athletics", "Braves Futures", "Reds Futures", "Manatees",
+           "Diablos Rojos", "Miracle", "Rays Futures", "National", "American",
+           "Tigres", "Rojos", "NL All-Stars"
+          ])
 
   cat_columns = [HT, AT]
 
@@ -275,7 +292,7 @@ def build_estimator(model_dir, model_type):
       model_dir=model_dir,
       linear_feature_columns=cat_columns,
       dnn_feature_columns=num_columns,
-      dnn_hidden_units=[100, 50])
+      dnn_hidden_units=[20, 10])
 
 
 def input_fn(df):
