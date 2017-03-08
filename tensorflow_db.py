@@ -2,7 +2,7 @@
 #Authors: Alex Greene & Giancarlo Tarantino
 
 from gamescout_db import db, cur
-debug_flag = True
+debug_flag = False
 
 def commit_to_db(stmt, data):
    if debug_flag == False:
@@ -32,7 +32,7 @@ def get_game(game_id):
    return create_game_obj(row[0])
 
 
-def is_one_run_game(game_id):
+def is_three_run_game(game_id):
    cur.execute("""
       SELECT
          HT_RUNS,
@@ -45,7 +45,8 @@ def is_one_run_game(game_id):
    score = cur.fetchall()
    home = score[0][0]
    away = score[0][1]
-   return True if abs(home - away) == 1 else False
+
+   return True if abs(home - away) == 3 else False
 
 
 #Builds a game object from a single row
@@ -155,9 +156,6 @@ def get_rivalry_split(home_team, away_team, date):
    total_games_in_rivalry = cur.fetchall()[0][0]
 
    rivalry_split = float(wins_for_dominant_team) / float(total_games_in_rivalry) if total_games_in_rivalry != 0 else None
-   print wins_for_dominant_team
-   print total_games_in_rivalry
-   print rivalry_split
    return rivalry_split
 
 def get_run_diff(team, date):
@@ -412,7 +410,7 @@ def fill_tensorflow():
             G_DATE,
             HT,
             AT,
-            ONE_RUN_GAME,
+            THREE_RUN_GAME,
             RIVALRY_SPLIT,
             HT_WPCT,
             HT_WPCT_1R,
@@ -471,7 +469,7 @@ def fill_tensorflow():
    game_ids = get_game_ids()
 
    for game_id in game_ids:
-      one_run_game = is_one_run_game(game_id)
+      three_run_game = is_three_run_game(game_id)
 
       game = get_game(game_id)
       ht_avg_hrs = get_avg_hrs_per_team(game_id, game['HT'], 1)
@@ -497,7 +495,7 @@ def fill_tensorflow():
          game['G_DATE'],
          game['HT'], 
          game['AT'], 
-         one_run_game, 
+         three_run_game, 
          rivalry_split,
          ht_wpct,
          ht_wpct_1r,
@@ -552,12 +550,17 @@ def fill_tensorflow():
       )
       data.append(row)
       count += 1
+      #commit every so often so the mysql db connection stays open
       if count % 250 == 0:
+         commit_to_db(stmt, data)
+         data = []
+      #when finished commit the uncommited data
+      if count == len(game_ids):
          commit_to_db(stmt, data)
          data = []
          
       print("Count: " + str(count) + " G_ID: " + game_id[0])
-   #commit_to_db(stmt, data)
+      #commit_to_db(stmt, data)
       
 if __name__ == '__main__':
    fill_tensorflow()
