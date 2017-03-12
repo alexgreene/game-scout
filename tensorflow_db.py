@@ -46,7 +46,7 @@ def is_three_run_game(game_id):
    home = score[0][0]
    away = score[0][1]
 
-   return True if abs(home - away) == 3 else False
+   return True if abs(home - away) <= 3 else False
 
 
 #Builds a game object from a single row
