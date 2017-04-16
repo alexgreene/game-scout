@@ -32,7 +32,7 @@ from gamescout_db import db, cur
 tf.logging.set_verbosity(tf.logging.INFO)
 
 COLUMNS = [
-  'ONE_RUN_GAME',
+  'THREE_RUN_GAME',
   'HT',
   'AT',
   'HT_WPCT',
@@ -140,7 +140,7 @@ CONTINUOUS_COLUMNS = [
 
 CATEGORICAL_COLUMNS = ["HT", "AT"]
 
-LABEL_COLUMN = 'ONE_RUN_GAME'
+LABEL_COLUMN = 'THREE_RUN_GAME'
 
 def build_estimator(model_dir, model_type):
   """Build an estimator."""
@@ -351,7 +351,7 @@ def train_and_eval(model_dir, model_type, train_steps, train_data, test_data):
 
   validation_monitor = tf.contrib.learn.monitors.ValidationMonitor(
     input_fn=lambda: input_fn(df_train),
-    every_n_steps=500,
+    every_n_steps=100,
     metrics=validation_metrics)
 
   m = build_estimator(model_dir, model_type)
