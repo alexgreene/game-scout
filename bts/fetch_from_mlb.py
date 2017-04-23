@@ -168,7 +168,11 @@ def parse_atbat(ab, inning, half):
       team_ab = inning["home_team"]
       team_pitch = inning["away_team"]
 
-   time = ab["start_tfs_zulu"].replace("T", " ").replace("Z", "")
+   time_zulu = safe(ab, "start_tfs_zulu")
+   if time_zulu is not None:
+      time = time_zulu.replace("T", " ").replace("Z", "")
+   else:
+      time = None
 
    return (
       safe(ab, "num"), safe(ab, "pitcher"), safe(ab, "batter"), safe(ab, "b"),
@@ -178,11 +182,14 @@ def parse_atbat(ab, inning, half):
 
 
 def parse_pitch(p):
-   time = p["tfs_zulu"].replace("T", " ").replace("Z", "")
-   on_2b = p["on_2b"] if "on_2b" in p else None
+   time_zulu = safe(p, "tfs_zulu")
+   if time_zulu is not None:
+      time = time_zulu.replace("T", " ").replace("Z", "")
+   else:
+      time = None
 
    return (
-      safe(p, "des"), time, safe(p, "x"), safe(p, "y"), on_2b, safe(p, "start_speed"),
+      safe(p, "des"), time, safe(p, "x"), safe(p, "y"), safe(p, "on_2b"), safe(p, "start_speed"),
       safe(p, "end_speed"), safe(p, "pitch_type"), safe(p, "sz_top"), safe(p, "sz_bot"),
       safe(p, "pfx_x"), safe(p, "pfx_z"), safe(p, "px"), safe(p, "pz"), safe(p, "x0"), 
       safe(p, "y0"), safe(p, "z0"), safe(p, "vx0"), safe(p, "vy0"), safe(p, "vz0"),
