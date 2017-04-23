@@ -148,7 +148,7 @@ def main():
                   parse(xml)
             commit_and_save(year, month, day)
 
-            print("{m}/{d}/{y} loaded.".format(d=day, m=month, y=year))
+            print("{m}/{d}/{y} loaded.\n".format(d=day, m=month, y=year))
 
    print("Data fetch complete ! ! !")
 
