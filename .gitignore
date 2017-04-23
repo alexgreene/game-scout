@@ -3,3 +3,4 @@ config.py
 *.pyc
 *.swp
 .ipynb_checkpoints/
+bts/checkpoint.txt
