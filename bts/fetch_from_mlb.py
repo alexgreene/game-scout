@@ -33,10 +33,11 @@ def commit_atbats(data):
          EVENT,
          INNING,
          TEAM_AB,
-         TEAM_PITCH
+         TEAM_PITCH,
+         G_ID
       )
       VALUES (
-         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s 
+         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
       )
     """
 
@@ -77,11 +78,13 @@ def commit_pitches(data):
          ZONE,
          NASTY,
          SPIN_DIR,
-         SPIN_RATE
+         SPIN_RATE,
+         ATBAT_NUM,
+         G_ID
       )
       VALUES (
          %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
       )
    """
 
@@ -145,7 +148,7 @@ def main():
                   inning_url = "{url}{inning}.xml".format(url=innings_url, inning=inning)
                   data = requests.get(inning_url)
                   xml = ElementTree.fromstring(data.content)
-                  parse(xml)
+                  parse(xml, game_id)
             commit_and_save(year, month, day)
 
             print("{m}/{d}/{y} loaded.\n".format(d=day, m=month, y=year))
@@ -157,7 +160,7 @@ def safe(d, key):
    return d[key] if key in d else None
 
 
-def parse_atbat(ab, inning, half):
+def parse_atbat(ab, inning, half, game_id):
    _height = ab["b_height"].split("-")
    height = int(_height[0]) * 12 + int(_height[1])
    
@@ -178,10 +181,10 @@ def parse_atbat(ab, inning, half):
       safe(ab, "num"), safe(ab, "pitcher"), safe(ab, "batter"), safe(ab, "b"),
       safe(ab, "s"), safe(ab, "o"), time, safe(ab, "stand"), safe(ab, "p_throws"),
       safe(ab, "home_team_runs"), safe(ab, "away_team_runs"), height, safe(ab, "event"),
-      safe(inning, "num"), team_ab, team_pitch)
+      safe(inning, "num"), team_ab, team_pitch, game_id)
 
 
-def parse_pitch(p):
+def parse_pitch(p, game_id, atbat_num):
    time_zulu = safe(p, "tfs_zulu")
    if time_zulu is not None:
       time = time_zulu.replace("T", " ").replace("Z", "")
@@ -195,17 +198,18 @@ def parse_pitch(p):
       safe(p, "y0"), safe(p, "z0"), safe(p, "vx0"), safe(p, "vy0"), safe(p, "vz0"),
       safe(p, "ax"), safe(p, "ay"), safe(p, "az"), safe(p, "break_y"), safe(p, "break_angle"),
       safe(p, "break_length"), safe(p, "pitch_type"), safe(p, "type_confidence"),
-      safe(p, "zone"), safe(p, "nasty"), safe(p, "spin_dir"), safe(p, "spin_rate"))
+      safe(p, "zone"), safe(p, "nasty"), safe(p, "spin_dir"), safe(p, "spin_rate"),
+      atbat_num, game_id)
 
 
-def parse(inning):
+def parse(inning, game_id):
    for half in inning:
       for ab in half.findall('atbat'):
-         atbat = parse_atbat(ab.attrib, inning.attrib, half.tag)
+         atbat = parse_atbat(ab.attrib, inning.attrib, half.tag, game_id)
          atbat_rows.append(atbat)
 
          for p in ab.findall('pitch'):
-            pitch = parse_pitch(p.attrib)
+            pitch = parse_pitch(p.attrib, game_id, atbat[0])
             pitch_rows.append(pitch)
 
                   
