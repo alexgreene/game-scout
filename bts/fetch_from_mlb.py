@@ -129,7 +129,7 @@ def main():
    for year in range(ckp_year, date.today().year + 1):
       
       start_month = 3 if year != ckp_year else ckp_month
-      end_month = 10 if year != date.today().year else date.today().month()
+      end_month = 10 if year != date.today().year else date.today().month
       for month in range(start_month, end_month + 1): 
 
          start_day = 1 if year != ckp_year or month != ckp_month else ckp_day + 1
