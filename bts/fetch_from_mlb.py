@@ -124,14 +124,17 @@ def load_checkpoint():
 
 def main():
    ckp_year, ckp_month, ckp_day = load_checkpoint()
+   postseason = False;
 
    for year in range(ckp_year, date.today().year + 1):
       
       start_month = 3 if year != ckp_year else ckp_month
-      for month in range(start_month, 10): 
+      end_month = 10 if year != date.today().year else date.today().month()
+      for month in range(start_month, end_month + 1): 
 
          start_day = 1 if year != ckp_year or month != ckp_month else ckp_day + 1
-         for day in range(start_day, num_days_in(month)+1):
+         end_day = num_days_in(month) if year != date.today().year or  month != date.today().month else date.today().month
+         for day in range(start_day, end_day + 1):
             url = 'http://gd.mlb.com/components/game/mlb/year_{y}/month_{m:02d}/day_{d:02d}/'.format(y=year, m=month, d=day)
             games_index = requests.get(url).text
             games = re.findall(r'> (gid.*mlb.*mlb.*)/</a>', games_index)
@@ -141,6 +144,11 @@ def main():
                   spring_check = requests.get(spring_check_url).text
                   if re.search(r'spring', spring_check):
                      continue
+               if month == 10:
+                  #Breaking out of games
+                  if "wc" in game_id:
+                     postseason = True
+                     break
                innings_url = "{url}{gid}/inning/".format(url=url, gid=game_id)
                innings_index = requests.get(innings_url).text
                innings = re.findall(r'> (inning_[0-9]+)', innings_index)
@@ -149,9 +157,18 @@ def main():
                   data = requests.get(inning_url)
                   xml = ElementTree.fromstring(data.content)
                   parse(xml, game_id)
+
+            #Breaking out of day
+            if postseason:
+               break
             commit_and_save(year, month, day)
 
             print("{m}/{d}/{y} loaded.\n".format(d=day, m=month, y=year))
+
+         #Breaking out of month
+         if postseason:
+            postseason = False
+            break;
 
    print("Data fetch complete ! ! !")
 
