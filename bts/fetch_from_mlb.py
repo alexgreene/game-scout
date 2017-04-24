@@ -143,7 +143,7 @@ def main():
                      continue
                innings_url = "{url}{gid}/inning/".format(url=url, gid=game_id)
                innings_index = requests.get(innings_url).text
-               innings = re.findall(r'(inning_[0-9]+)', innings_index)
+               innings = re.findall(r'> (inning_[0-9]+)', innings_index)
                for inning in innings:
                   inning_url = "{url}{inning}.xml".format(url=innings_url, inning=inning)
                   data = requests.get(inning_url)
