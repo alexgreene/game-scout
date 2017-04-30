@@ -119,7 +119,7 @@ def load_checkpoint():
       return (int(date[0]), int(date[1]), int(date[2]))
    except IOError:
       print("IOError")
-      return (2011, 3, 28)
+      return (2012, 3, 28)
 
 
 def main():
@@ -133,20 +133,18 @@ def main():
       for month in range(start_month, end_month + 1): 
 
          start_day = 1 if year != ckp_year or month != ckp_month else ckp_day + 1
-         end_day = num_days_in(month) if year != date.today().year or  month != date.today().month else date.today().month
+         end_day = num_days_in(month) if year != date.today().year or  month != date.today().month else date.today().day - 1
          for day in range(start_day, end_day + 1):
             url = 'http://gd.mlb.com/components/game/mlb/year_{y}/month_{m:02d}/day_{d:02d}/'.format(y=year, m=month, d=day)
             games_index = requests.get(url).text
             games = re.findall(r'> (gid.*mlb.*mlb.*)/</a>', games_index)
             for game_id in games:
-               if month == 3 or (month == 4 and day < 10):
+               if month == 3 or (month == 4 and day < 10) or (month == 9 and day > 25) or month == 10:
                   spring_check_url = "{url}{gid}/linescore.json".format(url=url, gid=game_id)
                   spring_check = requests.get(spring_check_url).text
                   if re.search(r'spring', spring_check):
                      continue
-               if month == 10:
-                  #Breaking out of games
-                  if "wc" in game_id:
+                  elif re.search(r'Wild Card', spring_check):
                      postseason = True
                      break
                innings_url = "{url}{gid}/inning/".format(url=url, gid=game_id)
