@@ -154,10 +154,10 @@ def main():
             postseason = False
             break;
 
-   print("Data fetch complete ! ! !")
+   print("Data fetch complete ! ! !\n")
 
    print("Updating Compiled Database...")
-   up.update_compiled(year, month, day)
+   up.update_compiled(year, month, end_day)
    print("Compiled Database Updated ! ! !")
 
 def safe(d, key):

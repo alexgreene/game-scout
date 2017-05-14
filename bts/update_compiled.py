@@ -34,6 +34,8 @@ def update_compiled(ckp_year, ckp_month, ckp_day):
    batter_stats['6_AGO'] = [0 if x == 0 else 1 for x in batter_stats['6_AGO_AVG']]
    batter_stats['7_AGO'] = [0 if x == 0 else 1 for x in batter_stats['7_AGO_AVG']]
 
+   batter_stats['G_DATE'] = pd.to_datetime(batter_stats['G_DATE'])
+
    batter_stats = batter_stats[['GOT_HIT', 'NOT_HIT', '1_AGO', '2_AGO', '3_AGO',
                                 '4_AGO', '5_AGO', '6_AGO','7_AGO', 'P_ID', 
                                 'G_ID', 'BAT_ORDER', 'G_DATE', 'TEAM']]
@@ -77,8 +79,8 @@ def update_compiled(ckp_year, ckp_month, ckp_day):
       
       order_series.append(batter['BAT_ORDER'])
 
-      if i % 5000 == 0:
-        print(i)
+      #if i % 5000 == 0:
+      print(i)
       
    batter_stats['hist_AB'] = pd.Series(hist_AB_series)
    batter_stats['hist_H'] = pd.Series(hist_H_series)
