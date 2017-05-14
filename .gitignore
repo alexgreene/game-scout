@@ -4,3 +4,4 @@ config.py
 *.swp
 .ipynb_checkpoints/
 bts/checkpoint.txt
+.csv
