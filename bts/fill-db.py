@@ -1,7 +1,8 @@
 import mlbgame as mlb
 import MySQLdb
 from config import config
-import datetime
+from datetime import date
+import checkpoints as ckp
 
 # Connect to the database and setup the db cursor.
 db = MySQLdb.connect(host = "localhost",
@@ -34,9 +35,10 @@ def guarant_type(val, attr):
         'lob', 'ao', 'po', 'a', 'go', 's_h', 's_r',
         's_hr', 's_rbi', 's_so', 's_bb', 'era', 'l', 'w', 'sv', 'er', 'hld',
         'bs', 'out', 'bf', 'game_score', 'np', 's_er', 's_ip', 's', 
-        'home_team_hits', 'home_team_runs', 'home_team_errors', 'away_team_hits',
-        'away_team_runs', 'away_team_errors','w_pitcher_wins', 'w_pitcher_losses',
-        'l_pitcher_wins','l_pitcher_losses', 'sv_pitcher_saves'])
+        'home_team_hits', 'home_team_runs', 'home_team_errors', 
+        'away_team_hits', 'away_team_runs', 'away_team_errors', 
+        'w_pitcher_wins', 'w_pitcher_losses', 'l_pitcher_wins',
+        'l_pitcher_losses', 'sv_pitcher_saves'])
     
     if attr not in num_reqs:
         return val
@@ -81,10 +83,13 @@ def ensure_attr_pitcher(pitcher):
 
 def ensure_attr_game(game):                            
     new_game = {}
-    for attr in ['game_type', 'game_id', 'game_league', 'game_status', 'game_start_time', 'home_team', 'home_team_runs',
-    'home_team_hits', 'home_team_errors', 'away_team', 'away_team_runs', 'away_team_hits', 'away_team_errors',
-    'w_pitcher', 'w_pitcher_wins', 'w_pitcher_losses', 'l_pitcher', 'l_pitcher_wins', 'l_pitcher_losses',
-    'sv_pitcher', 'sv_pitcher_saves']:
+    for attr in ['game_type', 'game_id', 'game_league', 'game_status', 
+                 'game_start_time', 'home_team', 'home_team_runs',
+                 'home_team_hits', 'home_team_errors', 'away_team', 
+                 'away_team_runs', 'away_team_hits', 'away_team_errors',
+                 'w_pitcher', 'w_pitcher_wins', 'w_pitcher_losses', 
+                 'l_pitcher', 'l_pitcher_wins', 'l_pitcher_losses',
+                 'sv_pitcher', 'sv_pitcher_saves']:
 
         if hasattr(game, attr):
             new_game[attr] = getattr(game, attr)
@@ -98,28 +103,25 @@ def ensure_attr_game(game):
 
     return new_game
 
-season = {
-    2012 : {'sm': 3, 'sd': 28, 'em': 10, 'ed': 28},
-    2013 : {'sm': 3, 'sd': 31, 'em': 10, 'ed': 30},
-    2014 : {'sm': 3, 'sd': 22, 'em': 10, 'ed': 29},
-    2015 : {'sm': 4, 'sd': 5, 'em': 11, 'ed': 1},
-    2016 : {'sm': 4, 'sd': 3, 'em': 11, 'ed': 2},
-}
+def num_days_in(month):
+   return {
+      3: 31, 4: 30, 5: 31,
+      6: 30, 7: 31, 8: 31,
+      9: 30, 10: 31
+   }[month]
 
 def fill_db_with_past_games():
-    for year in range(2012, 2017):
-        for month in range(season[year]['sm'], season[year]['em']):
-            if month == season[year]['em']:
-                sd = 1
-                ed = season[year]['ed']
-            elif month == season[year]['sm']:
-                sd = season[year]['sd']
-                ed = 31
-            else:
-                sd = 1
-                ed = 31
-            for day in range(sd, ed):
-                game_date = datetime.date(year, month, day).isoformat();
+    ckp_year, ckp_month, ckp_day = ckp.load_checkpoint("checkpoint1.txt")
+
+    for year in range(ckp_year, date.today().year + 1):
+        start_month = 3 if year != ckp_year else ckp_month
+        end_month = 10 if year != date.today().year else date.today().month
+        for month in range(start_month, end_month + 1):
+            start_day = 1 if year != ckp_year or month != ckp_month else ckp_day + 1
+            end_day = num_days_in(month) if year != date.today().year or  month != date.today().month else date.today().day - 1
+            for day in range(start_day, end_day + 1):
+
+                game_date = date(year, month, day).isoformat();
                 games = mlb.games(year, month, day)
                 games = mlb.combine_games(games)
                 for game in games:
@@ -564,6 +566,6 @@ def fill_db_with_past_games():
                                 new_pitcher['s']
                             ])
                         commit_to_db()
-                
+                ckp.save_checkpoint("checkpoint1.txt", year, month, day)
 
 fill_db_with_past_games()

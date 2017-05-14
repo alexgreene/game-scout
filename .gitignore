@@ -3,5 +3,7 @@ config.py
 *.pyc
 *.swp
 .ipynb_checkpoints/
-bts/checkpoint.txt
+bts/checkpoint1.txt
+bts/checkpoint2.txt
+bts/checkpoint3.txt
 .csv

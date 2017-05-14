@@ -4,6 +4,7 @@ import re
 from xml.etree import ElementTree
 from gamescout_db import db, cur
 import update_compiled as up
+import checkpoints as ckp
 
 debug_flag = False
 atbat_rows = []
@@ -105,29 +106,10 @@ def commit_and_save(year, month, day):
    pitch_rows = []
 
    print("Creating Checkpoint")
-   save_checkpoint("checkpoint.txt", year, month, day)
-
-def save_checkpoint(filename, year, month, day)
-   f = open(filename, "w")
-   f.write("{0},{1},{2}".format(year, month, day)) 
-   f.close()
-      
-
-def load_checkpoint(filename):
-   try:
-      f = open(filename, "r")
-      date = f.read().split(",")
-      f.close()
-
-      # Year, Month, Day
-      return (int(date[0]), int(date[1]), int(date[2]))
-   except IOError:
-      print("IOError")
-      return (2012, 3, 28)
-
+   ckp.save_checkpoint("checkpoint2.txt", year, month, day)
 
 def main():
-   ckp_year, ckp_month, ckp_day = load_checkpoint("checkpoint.txt")
+   ckp_year, ckp_month, ckp_day = ckp.load_checkpoint("checkpoint2.txt")
    postseason = False;
 
    for year in range(ckp_year, date.today().year + 1):
@@ -175,8 +157,7 @@ def main():
    print("Data fetch complete ! ! !")
 
    print("Updating Compiled Database...")
-   up.update_compiled()
-   save_checkpoint("checkpoint2.txt", year, month, day)
+   up.update_compiled(year, month, day)
    print("Compiled Database Updated ! ! !")
 
 def safe(d, key):

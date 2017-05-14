@@ -2,14 +2,12 @@ import pandas as pd
 from gamescout_db import db, cur
 import numpy as np
 import math
-import fetch_from_mlb as fetch
+import checkpoints as ckp
 
 
-def update_compiled():
-   year, month, day = fetch.load_checkpoint("checkpoint2.txt")
+def update_compiled(ckp_year, ckp_month, ckp_day):
+   year, month, day = ckp.load_checkpoint("checkpoint3.txt")
    last_date = "{0}-{1}-{2}".format(year, month, day)
-
-   
 
    batter_stats_COLUMNS = ['HITS','1_AGO_AVG', '2_AGO_AVG', '3_AGO_AVG', 
                            '4_AGO_AVG', '5_AGO_AVG', '6_AGO_AVG','7_AGO_AVG', 
@@ -53,6 +51,8 @@ def update_compiled():
    GS3AGO_series = []
    order_series = []
 
+   #batter_stats = batter_stats[batter_stats['G_ID'].isin(at_bats['G_ID'].tolist())]
+
    for i in range(0, len(batter_stats)):
       batter = batter_stats.ix[i]
       starting_pitcher = pitcher_stats[pitcher_stats['G_ID'] == batter['G_ID']]
@@ -76,6 +76,9 @@ def update_compiled():
       GS3AGO_series.append(starting_pitcher['GAME_SCORE_3AGO'].iloc[0])
       
       order_series.append(batter['BAT_ORDER'])
+
+      if i % 5000 == 0:
+        print(i)
       
    batter_stats['hist_AB'] = pd.Series(hist_AB_series)
    batter_stats['hist_H'] = pd.Series(hist_H_series)
@@ -86,4 +89,5 @@ def update_compiled():
    batter_stats['BAT_ORDER'] = pd.Series(order_series)
 
    batter_stats.to_sql('Compiled', con=db, if_exists='append')
-   
+  
+   ckp.save_checkpoint("checkpoint3.txt", ckp_year, ckp_month, ckp_day) 
