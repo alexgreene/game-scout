@@ -14,4 +14,4 @@ def load_checkpoint(filename):
       return (int(date[0]), int(date[1]), int(date[2]))
    except IOError:
       print("IOError")
-      return (2012, 3, 28)
+      return (2012, 3, 25)
