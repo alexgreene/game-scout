@@ -14,13 +14,13 @@ def update_compiled(ckp_year, ckp_month, ckp_day):
                            'P_ID','G_ID', 'BAT_ORDER', 'G_DATE', 'TEAM']
 
    at_bats_COLUMNS = ['BATTER', 'PITCHER', 'G_ID', 'BATTER_LR',
-                      'PITCHER_LR', 'TIME', 'EVENT']
+                      'PITCHER_LR', 'G_DATE', 'EVENT']
 
    pitcher_stats_COLUMNS = ['P_ID', 'G_ID', 'GAME_SCORE', 'BATTERS_FACED', 
                             'TEAM', 'GAME_SCORE_1AGO', 'GAME_SCORE_2AGO', 
                             'GAME_SCORE_3AGO']
 
-   select_bs = 'SELECT * FROM BatterStats WHERE G_DATE > {0};'.format(last_date)
+   select_bs = 'SELECT * FROM BatterStats WHERE G_DATE > \'{0}\';'.format(last_date)
 
    batter_stats = pd.read_sql(select_bs, con=db)[batter_stats_COLUMNS]
    batter_stats['GOT_HIT'] = [1 if x > 0 else 0 for x in batter_stats['HITS']]
@@ -34,14 +34,12 @@ def update_compiled(ckp_year, ckp_month, ckp_day):
    batter_stats['6_AGO'] = [0 if x == 0 else 1 for x in batter_stats['6_AGO_AVG']]
    batter_stats['7_AGO'] = [0 if x == 0 else 1 for x in batter_stats['7_AGO_AVG']]
 
-   batter_stats['G_DATE'] = pd.to_datetime(batter_stats['G_DATE'])
-
    batter_stats = batter_stats[['GOT_HIT', 'NOT_HIT', '1_AGO', '2_AGO', '3_AGO',
                                 '4_AGO', '5_AGO', '6_AGO','7_AGO', 'P_ID', 
                                 'G_ID', 'BAT_ORDER', 'G_DATE', 'TEAM']]
 
 
-   select_ps = 'SELECT * FROM PitcherStats WHERE G_DATE > {0};'.format(last_date)
+   select_ps = 'SELECT * FROM PitcherStats WHERE G_DATE > \'{0}\';'.format(last_date)
    pitcher_stats = pd.read_sql(select_ps, con=db)[pitcher_stats_COLUMNS]
    at_bats = pd.read_sql('select * from AtBats;', con=db)[at_bats_COLUMNS]
 
@@ -53,8 +51,6 @@ def update_compiled(ckp_year, ckp_month, ckp_day):
    GS3AGO_series = []
    order_series = []
 
-   #batter_stats = batter_stats[batter_stats['G_ID'].isin(at_bats['G_ID'].tolist())]
-
    for i in range(0, len(batter_stats)):
       batter = batter_stats.ix[i]
       starting_pitcher = pitcher_stats[pitcher_stats['G_ID'] == batter['G_ID']]
@@ -62,8 +58,8 @@ def update_compiled(ckp_year, ckp_month, ckp_day):
       starting_pitcher = starting_pitcher.sort(['BATTERS_FACED'], ascending=False).head(1)
 
       matchups = at_bats[at_bats['BATTER'] == batter['P_ID']]
-      matchups = matchups[at_bats['PITCHER'] == starting_pitcher['P_ID'].iloc[0]]
-      matchups = matchups[at_bats['TIME'] < batter['G_DATE']]
+      matchups = matchups[matchups['PITCHER'] == starting_pitcher['P_ID'].iloc[0]]
+      matchups = matchups[matchups['G_DATE'] < batter['G_DATE']]
       matchups_hits = matchups[matchups['EVENT'].isin(['Single', 'Double', 'Triple', 'Home Run'])]
 
       hist_AB = len(matchups)
@@ -79,8 +75,8 @@ def update_compiled(ckp_year, ckp_month, ckp_day):
       
       order_series.append(batter['BAT_ORDER'])
 
-      #if i % 5000 == 0:
-      print(i)
+      if i % 1000 == 0:
+         print(i)
       
    batter_stats['hist_AB'] = pd.Series(hist_AB_series)
    batter_stats['hist_H'] = pd.Series(hist_H_series)
@@ -90,6 +86,9 @@ def update_compiled(ckp_year, ckp_month, ckp_day):
    batter_stats['GS3AGO'] = pd.Series(GS3AGO_series)
    batter_stats['BAT_ORDER'] = pd.Series(order_series)
 
-   batter_stats.to_sql('Compiled', con=db, if_exists='append')
-  
-   ckp.save_checkpoint("checkpoint3.txt", ckp_year, ckp_month, ckp_day) 
+   #batter_stats.to_sql('Compiled', con=db, if_exists='append')
+   batter_stats.to_csv('SAVED.csv')
+
+   ckp.save_checkpoint("checkpoint3.txt", ckp_year, ckp_month, ckp_day)
+
+

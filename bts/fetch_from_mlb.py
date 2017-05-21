@@ -36,10 +36,11 @@ def commit_atbats(data):
          INNING,
          TEAM_AB,
          TEAM_PITCH,
-         G_ID
+         G_ID,
+         G_DATE
       )
       VALUES (
-         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
       )
     """
 
@@ -97,7 +98,7 @@ def commit_and_save(year, month, day):
    global atbat_rows
    global pitch_rows
   
-   print("Committing AtBats") 
+   print("Committing AtBats")
    commit_atbats(atbat_rows)
    atbat_rows = []
 
@@ -140,7 +141,7 @@ def main():
                   inning_url = "{url}{inning}.xml".format(url=innings_url, inning=inning)
                   data = requests.get(inning_url)
                   xml = ElementTree.fromstring(data.content)
-                  parse(xml, game_id)
+                  parse(xml, game_id, year, month, day)
 
             #Breaking out of day
             if postseason:
@@ -164,10 +165,11 @@ def safe(d, key):
    return d[key] if key in d else None
 
 
-def parse_atbat(ab, inning, half, game_id):
+def parse_atbat(ab, inning, half, game_id, year, month, day):
    _height = ab["b_height"].split("-")
    height = int(_height[0]) * 12 + int(_height[1])
-   
+   g_date = "{0}-{1}-{2}".format(year, month, day)
+
    if half == "top":
       team_ab = inning["away_team"]
       team_pitch = inning["home_team"]
@@ -185,7 +187,7 @@ def parse_atbat(ab, inning, half, game_id):
       safe(ab, "num"), safe(ab, "pitcher"), safe(ab, "batter"), safe(ab, "b"),
       safe(ab, "s"), safe(ab, "o"), time, safe(ab, "stand"), safe(ab, "p_throws"),
       safe(ab, "home_team_runs"), safe(ab, "away_team_runs"), height, safe(ab, "event"),
-      safe(inning, "num"), team_ab, team_pitch, game_id)
+      safe(inning, "num"), team_ab, team_pitch, game_id, g_date)
 
 
 def parse_pitch(p, game_id, atbat_num):
@@ -206,10 +208,10 @@ def parse_pitch(p, game_id, atbat_num):
       atbat_num, game_id)
 
 
-def parse(inning, game_id):
+def parse(inning, game_id, year, month, day):
    for half in inning:
       for ab in half.findall('atbat'):
-         atbat = parse_atbat(ab.attrib, inning.attrib, half.tag, game_id)
+         atbat = parse_atbat(ab.attrib, inning.attrib, half.tag, game_id, year, month, day)
          atbat_rows.append(atbat)
 
          for p in ab.findall('pitch'):
