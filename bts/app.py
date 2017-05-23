@@ -108,8 +108,6 @@ day_{d:02d}/".format(y=tomorrow.year, m=tomorrow.month, d=tomorrow.day)
    games_index = requests.get(url).text
    games = re.findall(r'> (gid.*mlb.*mlb.*)/</a>', games_index)
 
-   p_dummies = dict.fromkeys(pitch_dummies, [0])
-   b_dummies = dict.fromkeys(bat_dummies, [0])
 
    for game_id in games:
       info_url = '{url}{gid}/linescore.json'.format(url=url, gid=game_id)
@@ -143,6 +141,9 @@ day_{d:02d}/".format(y=tomorrow.year, m=tomorrow.month, d=tomorrow.day)
          batter_id = row[0]
          batter_name = row[1]
          pitcher_id = matchup['pitcher']
+
+         p_dummies = dict.fromkeys(pitch_dummies, [0])
+         b_dummies = dict.fromkeys(bat_dummies, [0])
 
          if pitcher_id in p_dummies:
             p_dummies[pitcher_id] = [1]
