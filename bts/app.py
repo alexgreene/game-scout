@@ -195,7 +195,9 @@ day_{d:02d}/".format(y=tomorrow.year, m=tomorrow.month, d=tomorrow.day)
       pd.DataFrame(pred, columns=['Prediction'])], axis=1))
 
    results = results.sort_values(['Prediction'], ascending=False)
-   print(results.head())
+
+   # Print the top 10 batters who are predicted to get a hit tomorrow
+   print(results[:10])
 
 
 if __name__ == '__main__':
