@@ -1,0 +1,20 @@
+#!/bin/bash
+
+python fill-db.py
+python batters.py
+python pitchers.py
+python fetch_from_mlb.py
+
+# Copy SAVED.csv to Compiled.csv so that it can be imported.
+# the mysqlimport command requires that the csv file be named 
+# the same as the table you are trying to insert into.
+cp SAVED.csv Compiled.csv
+
+# Create a backup of the existing Compiled table in case of errors
+mysqldump -u seniorproject mlbdata Compiled > Compiled_Backup.sql
+
+# Import the new data to the Compiled table
+mysqlimport -u seniorproject --ignore-lines=1 --fields-terminated-by=, --verbose --local mlbdata Compiled.csv
+
+# Removed Compiled.csv to keep directory clean
+rm Compiled.csv

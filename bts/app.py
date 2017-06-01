@@ -7,7 +7,6 @@ import json
 import re
 
 def createModel():
-   #compiled = pd.read_sql('SELECT * FROM Compiled;', con=db)
    data = pd.read_sql('SELECT * FROM Compiled;', con=db)
 
    cur.execute("""
@@ -26,7 +25,20 @@ def createModel():
    """)
    num_batters = cur.fetchall()[0][0]
 
-   #data = compiled.copy()
+   games_played_batter = data.groupby('P_ID').size()
+   data = (data.join(pd.DataFrame(games_played_batter, 
+      columns=['GAMES_PLAYED_B']), on=['P_ID']))
+
+   games_played_pitcher = (data.groupby(['starting_P_ID', 'G_ID']).size()
+      .reset_index().groupby('starting_P_ID').size())
+   data = (data.join(pd.DataFrame(games_played_pitcher, 
+      columns=['GAMES_PLAYED_P']), on=['starting_P_ID']))
+
+   data['P_ID'] = ([111 if data['GAMES_PLAYED_B'][x] < 100 
+      else data['P_ID'][x] for x in range(len(data))])
+   data['starting_P_ID'] = ([222 if data['GAMES_PLAYED_P'][x] < 20 
+      else data['starting_P_ID'][x] for x in range(len(data))])
+
    data = data[pd.notnull(data['GS1AGO'])]
    data = data[pd.notnull(data['GS2AGO'])]
    data = data[pd.notnull(data['GS3AGO'])]
@@ -39,7 +51,6 @@ def createModel():
    pitch_dummies = pd.get_dummies(data['starting_P_ID']).iloc[:,1:num_pitchers] 
    bat_dummies = pd.get_dummies(data['P_ID']).iloc[:,1:num_batters]
 
-   #data['Gamma'] = data['hist_H'] - (.1 * data['hist_AB'])
    data['Gamma'] = computeGamma(data['hist_H'], data['hist_AB'])
 
    data = pd.concat([data, pitch_dummies], axis=1)
@@ -53,14 +64,7 @@ def createModel():
    y = labels
    x = data
 
-   #train_x = x[:250000]
-   #test_x = x[250001:]
-
-   #train_y = y[:250000]
-   #test_y = y[250001:]
-
    model = linear_model.LogisticRegression(class_weight='balanced')
-   #model.fit(train_x, train_y)
    model.fit(x, y)
 
    return (model, pitch_dummies.columns, bat_dummies.columns)
@@ -81,7 +85,10 @@ def recentBatterGame(batter_id):
       LIMIT 1
    """, [batter_id])
 
-   return cur.fetchall()[0]
+   try:
+      return cur.fetchall()[0]
+   except:
+      print("Recent Batter Error: " + str(batter_id))
 
 def recentPitcherGame(pitcher_id):
    cur.execute("""
@@ -94,13 +101,18 @@ def recentPitcherGame(pitcher_id):
       ORDER BY G_DATE DESC
       LIMIT 1
    """, [pitcher_id])
-
-   return cur.fetchall()[0]
+   try:
+      return cur.fetchall()[0]
+   except:
+      print("Recent Pitcher Error: " + str(pitcher_id))
    
 def predictHits(model, pitch_dummies, bat_dummies):
    matchups = []
+   players = []
+   model_input = pd.DataFrame()
 
-   cur_season = date.today().year
+   cur_day = date.today()
+   cur_season = cur_day.year
    tomorrow = date.today() + timedelta(days=1)
    url = "http://gd.mlb.com/components/game/mlb/year_{y}/month_{m:02d}/\
 day_{d:02d}/".format(y=tomorrow.year, m=tomorrow.month, d=tomorrow.day)
@@ -132,8 +144,9 @@ day_{d:02d}/".format(y=tomorrow.year, m=tomorrow.month, d=tomorrow.day)
          FROM 
             BatterStats 
          WHERE 
-            TEAM=%s AND YEAR(G_DATE)=%s
-      """, [matchup['opp_team'], cur_season]
+            TEAM=%s AND YEAR(G_DATE)=%s AND 
+            G_DATE >= DATE_ADD(%s,INTERVAL -5 DAY)
+      """, [matchup['opp_team'], cur_season, cur_day]
       )
       rows = cur.fetchall()
 
@@ -169,11 +182,20 @@ day_{d:02d}/".format(y=tomorrow.year, m=tomorrow.month, d=tomorrow.day)
             'GS3AGO': pitcher[2],
             'Gamma': [computeGamma(batter[8], batter[9])]
          })
-         
-         model_input = pd.concat([stats, p_dummies_df, b_dummies_df], axis=1)
 
-         pred = model.predict_proba(model_input)[:,1] 
-         print("{0} - {1} ({2}), P: {3}".format(pred, batter_name, batter_id, pitcher_id))
+         players.append({'batter_id': batter_id, 'batter_name': batter_name,
+            'pitcher_id': pitcher_id})
+         player_data = pd.concat([stats, p_dummies_df, b_dummies_df], axis=1)
+         model_input = model_input.append(player_data)
+
+   pred = model.predict_proba(model_input)[:,1]
+   players_df = pd.DataFrame(players)
+
+   results = (pd.concat([players_df, 
+      pd.DataFrame(pred, columns=['Prediction'])], axis=1))
+
+   results = results.sort_values(['Prediction'], ascending=False)
+   print(results.head())
 
 
 if __name__ == '__main__':

@@ -4,10 +4,21 @@ import numpy as np
 import math
 import checkpoints as ckp
 
+def computeIndex():
+   cur.execute("""
+      SELECT
+         COUNT(*)
+      FROM
+         Compiled
+   """)
+   
+   return cur.fetchall()[0][0] + 1
 
 def update_compiled(ckp_year, ckp_month, ckp_day):
    year, month, day = ckp.load_checkpoint("checkpoint3.txt")
    last_date = "{0}-{1}-{2}".format(year, month, day)
+
+   curIndex = computeIndex()
 
    batter_stats_COLUMNS = ['HITS','1_AGO_AVG', '2_AGO_AVG', '3_AGO_AVG', 
                            '4_AGO_AVG', '5_AGO_AVG', '6_AGO_AVG','7_AGO_AVG', 
@@ -87,8 +98,8 @@ def update_compiled(ckp_year, ckp_month, ckp_day):
    batter_stats['BAT_ORDER'] = pd.Series(order_series)
 
    #batter_stats.to_sql('Compiled', con=db, if_exists='append')
+   batter_stats.index += curIndex
    batter_stats.to_csv('SAVED.csv')
 
    ckp.save_checkpoint("checkpoint3.txt", ckp_year, ckp_month, ckp_day)
-
 
