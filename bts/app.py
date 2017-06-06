@@ -34,9 +34,9 @@ def createModel():
    data = (data.join(pd.DataFrame(games_played_pitcher, 
       columns=['GAMES_PLAYED_P']), on=['starting_P_ID']))
 
-   data['P_ID'] = ([111 if data['GAMES_PLAYED_B'][x] < 100 
+   data['P_ID'] = (['111' if data['GAMES_PLAYED_B'][x] < 100 
       else data['P_ID'][x] for x in range(len(data))])
-   data['starting_P_ID'] = ([222 if data['GAMES_PLAYED_P'][x] < 20 
+   data['starting_P_ID'] = (['222' if data['GAMES_PLAYED_P'][x] < 20 
       else data['starting_P_ID'][x] for x in range(len(data))])
 
    data = data[pd.notnull(data['GS1AGO'])]
@@ -48,8 +48,10 @@ def createModel():
                 'GS1AGO', 'GS2AGO', 'GS3AGO', 'starting_P_ID', 'P_ID', 
                 'hist_AB', 'hist_H']]
 
-   pitch_dummies = pd.get_dummies(data['starting_P_ID']).iloc[:,1:num_pitchers] 
-   bat_dummies = pd.get_dummies(data['P_ID']).iloc[:,1:num_batters]
+   pitch_dummies = pd.get_dummies(data['starting_P_ID'])#.iloc[:,1:num_pitchers] 
+   pitch_dummies = pitch_dummies.drop('222', 1)
+   bat_dummies = pd.get_dummies(data['P_ID'])#.iloc[:,1:num_batters]
+   bat_dummies = bat_dummies.drop('111', 1)
 
    data['Gamma'] = computeGamma(data['hist_H'], data['hist_AB'])
 
@@ -104,6 +106,7 @@ def recentPitcherGame(pitcher_id):
    try:
       return cur.fetchall()[0]
    except:
+      return (0, 0, 0)
       print("Recent Pitcher Error: " + str(pitcher_id))
    
 def predictHits(model, pitch_dummies, bat_dummies):
@@ -158,12 +161,12 @@ day_{d:02d}/".format(y=tomorrow.year, m=tomorrow.month, d=tomorrow.day)
          p_dummies = dict.fromkeys(pitch_dummies, [0])
          b_dummies = dict.fromkeys(bat_dummies, [0])
 
-         if pitcher_id in p_dummies:
-            p_dummies[pitcher_id] = [1]
+         if 'p_{0}'.format(pitcher_id) in p_dummies:
+            p_dummies['p_{0}'.format(pitcher_id)] = [1]
          p_dummies_df = pd.DataFrame(p_dummies)
 
-         if batter_id in b_dummies:
-            b_dummies[batter_id] = [1]
+         if 'b_{0}'.format(batter_id) in b_dummies:
+            b_dummies['b_{0}'.format(batter_id)] = [1]
          b_dummies_df = pd.DataFrame(b_dummies)
 
          batter = recentBatterGame(batter_id)
