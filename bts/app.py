@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from gamescout_db import db, cur 
+from gamescout_db import db, cur
 from sklearn import linear_model
 import pandas as pd
 import requests
@@ -26,17 +26,17 @@ def createModel():
    num_batters = cur.fetchall()[0][0]
 
    games_played_batter = data.groupby('P_ID').size()
-   data = (data.join(pd.DataFrame(games_played_batter, 
+   data = (data.join(pd.DataFrame(games_played_batter,
       columns=['GAMES_PLAYED_B']), on=['P_ID']))
 
    games_played_pitcher = (data.groupby(['starting_P_ID', 'G_ID']).size()
       .reset_index().groupby('starting_P_ID').size())
-   data = (data.join(pd.DataFrame(games_played_pitcher, 
+   data = (data.join(pd.DataFrame(games_played_pitcher,
       columns=['GAMES_PLAYED_P']), on=['starting_P_ID']))
 
-   data['P_ID'] = (['111' if data['GAMES_PLAYED_B'][x] < 100 
+   data['P_ID'] = (['111' if data['GAMES_PLAYED_B'][x] < 100
       else data['P_ID'][x] for x in range(len(data))])
-   data['starting_P_ID'] = (['222' if data['GAMES_PLAYED_P'][x] < 20 
+   data['starting_P_ID'] = (['222' if data['GAMES_PLAYED_P'][x] < 20
       else data['starting_P_ID'][x] for x in range(len(data))])
 
    data = data[pd.notnull(data['GS1AGO'])]
@@ -45,10 +45,10 @@ def createModel():
 
    labels = data['GOT_HIT']
    data = data[['1_AGO', '2_AGO', '3_AGO', '4_AGO', '5_AGO', '6_AGO', '7_AGO',
-                'GS1AGO', 'GS2AGO', 'GS3AGO', 'starting_P_ID', 'P_ID', 
+                'GS1AGO', 'GS2AGO', 'GS3AGO', 'starting_P_ID', 'P_ID',
                 'hist_AB', 'hist_H']]
 
-   pitch_dummies = pd.get_dummies(data['starting_P_ID'])#.iloc[:,1:num_pitchers] 
+   pitch_dummies = pd.get_dummies(data['starting_P_ID'])#.iloc[:,1:num_pitchers]
    pitch_dummies = pitch_dummies.drop('222', 1)
    bat_dummies = pd.get_dummies(data['P_ID'])#.iloc[:,1:num_batters]
    bat_dummies = bat_dummies.drop('111', 1)
@@ -77,7 +77,7 @@ def computeGamma(hits, atbats):
 def recentBatterGame(batter_id):
    cur.execute("""
       SELECT
-         GOT_HIT, 1_AGO, 2_AGO, 3_AGO, 4_AGO, 
+         GOT_HIT, 1_AGO, 2_AGO, 3_AGO, 4_AGO,
          5_AGO, 6_AGO, 7_AGO, hist_H, hist_AB
       FROM
          Compiled
@@ -90,6 +90,8 @@ def recentBatterGame(batter_id):
    try:
       return cur.fetchall()[0]
    except:
+      #return (None, None, None, None, None,
+      #   None, None, None, None, None)
       print("Recent Batter Error: " + str(batter_id))
 
 def recentPitcherGame(pitcher_id):
@@ -107,8 +109,9 @@ def recentPitcherGame(pitcher_id):
       return cur.fetchall()[0]
    except:
       return (0, 0, 0)
+      #return (None, None, None)
       print("Recent Pitcher Error: " + str(pitcher_id))
-   
+
 def predictHits(model, pitch_dummies, bat_dummies):
    matchups = []
    players = []
@@ -128,7 +131,7 @@ day_{d:02d}/".format(y=tomorrow.year, m=tomorrow.month, d=tomorrow.day)
       info_url = '{url}{gid}/linescore.json'.format(url=url, gid=game_id)
       response = requests.get(info_url)
       info = json.loads(response.text)
-      
+
       game = info['data']['game']
       matchups.append({
          'pitcher':  game['home_probable_pitcher']['id'],
@@ -143,11 +146,11 @@ day_{d:02d}/".format(y=tomorrow.year, m=tomorrow.month, d=tomorrow.day)
    for matchup in matchups:
       cur.execute("""
          SELECT
-            DISTINCT P_ID, NAME 
-         FROM 
-            BatterStats 
-         WHERE 
-            TEAM=%s AND YEAR(G_DATE)=%s AND 
+            DISTINCT P_ID, NAME
+         FROM
+            BatterStats
+         WHERE
+            TEAM=%s AND YEAR(G_DATE)=%s AND
             G_DATE >= DATE_ADD(%s,INTERVAL -5 DAY)
       """, [matchup['opp_team'], cur_season, cur_day]
       )
@@ -158,6 +161,7 @@ day_{d:02d}/".format(y=tomorrow.year, m=tomorrow.month, d=tomorrow.day)
          batter_name = row[1]
          pitcher_id = matchup['pitcher']
 
+         #if pitcher_id:
          p_dummies = dict.fromkeys(pitch_dummies, [0])
          b_dummies = dict.fromkeys(bat_dummies, [0])
 
@@ -194,7 +198,7 @@ day_{d:02d}/".format(y=tomorrow.year, m=tomorrow.month, d=tomorrow.day)
    pred = model.predict_proba(model_input)[:,1]
    players_df = pd.DataFrame(players)
 
-   results = (pd.concat([players_df, 
+   results = (pd.concat([players_df,
       pd.DataFrame(pred, columns=['Prediction'])], axis=1))
 
    results = results.sort_values(['Prediction'], ascending=False)

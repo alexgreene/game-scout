@@ -49,12 +49,12 @@ def create_batter_obj(row):
    b['1_AGO_AVG'] = row[41];              b['2_AGO_AVG'] = row[42]
    b['3_AGO_AVG'] = row[43];              b['4_AGO_AVG'] = row[44]
    b['5_AGO_AVG'] = row[45];
-   
+
    return b
 
 def commit_batter(avgs, row):
    stmt = """
-      UPDATE 
+      UPDATE
          BatterStats
        SET
          1_AGO_AVG = %s,
@@ -91,7 +91,7 @@ def commit_batter(avgs, row):
       avgs[11],
       avgs[12],
       avgs[13],
-      avgs[14],         
+      avgs[14],
       row
    )
 
@@ -104,12 +104,12 @@ def update_batter_tbl():
 
    for row in range(0,len(batters)):
       batter = create_batter_obj(batters[row])
-      
+
       if batter["NAME"] != cur_batter:
          cur_batter = batter["NAME"]
          window = []
 
-      # Add new element   
+      # Add new element
       bat_avg = (float(batter['HITS']) / float(batter['AB'])) if batter['AB'] != 0 else None
 
       full_window = window + ([None] * (15 - len(window)))
@@ -117,7 +117,7 @@ def update_batter_tbl():
       commit_batter(full_window, batter["ID"])
 
       window.insert(0, bat_avg)
-      
+
       if len(window) > 15:
          window.pop(15)
 
